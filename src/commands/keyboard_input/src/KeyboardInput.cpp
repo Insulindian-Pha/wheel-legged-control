@@ -2,8 +2,8 @@
 // Created by biao on 24-9-11.
 //
 
-#include <keyboard_input/KeyboardInput.h>
 #include <algorithm>
+#include <keyboard_input/KeyboardInput.h>
 
 KeyboardInput::KeyboardInput() : Node("keyboard_input_node")
 {
@@ -26,20 +26,7 @@ void KeyboardInput::timer_callback()
   // 处理没有按键输入的情况
   if (!kbhit())
   {
-    if (!just_published_)
-      return;
-
-    reset_count_ -= 1;
-    if (reset_count_ != 0)
-      return;
-
-    just_published_ = false;
-    if (inputs_.command == 0)
-      return;
-
-    inputs_.command = 0;
     publisher_->publish(inputs_);
-
     return;
   }
 
@@ -117,44 +104,36 @@ void KeyboardInput::check_value(char key)
   {
     case 'w':
     case 'W':
-      inputs_.ly += increase;
-      inputs_.ly = std::clamp(inputs_.ly, -1.0f, 1.0f);
+      inputs_.ly = 1;
       break;
     case 's':
     case 'S':
-      inputs_.ly -= increase;
-      inputs_.ly = std::clamp(inputs_.ly, -1.0f, 1.0f);
+      inputs_.ly = -1;
       break;
     case 'd':
     case 'D':
-      inputs_.lx += increase;
-      inputs_.lx = std::clamp(inputs_.lx, -1.0f, 1.0f);
+      inputs_.lx = 1;
       break;
     case 'a':
     case 'A':
-      inputs_.lx -= increase;
-      inputs_.lx = std::clamp(inputs_.lx, -1.0f, 1.0f);
+      inputs_.lx = -1;
       break;
 
     case 'i':
     case 'I':
-      inputs_.ry += increase;
-      inputs_.ry = std::clamp(inputs_.ry, -1.0f, 1.0f);
+      inputs_.ry = 1;
       break;
     case 'k':
     case 'K':
-      inputs_.ry -= increase;
-      inputs_.ry = std::clamp(inputs_.ry, -1.0f, 1.0f);
+      inputs_.ry = -1;
       break;
     case 'l':
     case 'L':
-      inputs_.rx += increase;
-      inputs_.rx = std::clamp(inputs_.rx, -1.0f, 1.0f);
+      inputs_.rx = 1;
       break;
     case 'j':
     case 'J':
-      inputs_.rx -= increase;
-      inputs_.rx = std::clamp(inputs_.rx, -1.0f, 1.0f);
+      inputs_.rx = -1;
       break;
     default:
       break;
