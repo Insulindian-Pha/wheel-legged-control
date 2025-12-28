@@ -1,0 +1,8 @@
+<?xml version="1.0"?>
+<robot name="COD-Balance" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+    <xacro:include filename="$(find cod_2026_balance)/urdf/COD_2026_Balance_2_0.xacro"/>
+    <xacro:include filename="$(find cod_2026_balance)/urdf/ros2_control.xacro"/>
+    <xacro:include filename="$(find cod_2026_balance)/urdf/gazebo.xacro"/>
+
+</robot>

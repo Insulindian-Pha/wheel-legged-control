@@ -1,4 +1,5 @@
 import os
+import subprocess
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
@@ -10,12 +11,19 @@ def generate_launch_description():
     # Get package share directory
     pkg_share = get_package_share_directory('cod_2026_balance')
 
-    # Get URDF file path
-    urdf_file = os.path.join(pkg_share, 'urdf', 'COD_2026_Balance_2_0.urdf')
+    # Get xacro file path (use the main xacro file that includes others)
+    xacro_file = os.path.join(pkg_share, 'urdf', 'cod_balance_robot.xacro')
 
-    # Read URDF file
-    with open(urdf_file, 'r') as infp:
-        robot_desc = infp.read()
+    # Process xacro file to generate URDF
+    # xacro will automatically handle the include and resolve package:// paths
+    robot_desc = subprocess.run(
+        ['xacro', xacro_file],
+        capture_output=True,
+        text=True,
+        check=True
+    ).stdout
+    
+    robot_desc = robot_desc.replace('package://cod_2026_balance/', 'file://' + pkg_share + '/')
 
     # Declare launch arguments
     use_sim_time = LaunchConfiguration('use_sim_time', default='false')
@@ -40,14 +48,6 @@ def generate_launch_description():
         output='screen'
     )
 
-    # RViz2 node
-    rviz_node = Node(
-        package='rviz2',
-        executable='rviz2',
-        name='rviz2',
-        output='screen'
-    )
-
     return LaunchDescription([
         DeclareLaunchArgument(
             'use_sim_time',
@@ -56,6 +56,5 @@ def generate_launch_description():
         ),
         robot_state_publisher_node,
         joint_state_publisher_gui_node,
-        rviz_node
     ])
 

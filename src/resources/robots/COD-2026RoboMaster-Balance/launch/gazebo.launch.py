@@ -1,4 +1,5 @@
 import os
+import subprocess
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
 from launch.actions import IncludeLaunchDescription, ExecuteProcess, RegisterEventHandler
@@ -12,19 +13,20 @@ def generate_launch_description():
     pkg_share = get_package_share_directory('cod_2026_balance')
     gazebo_ros_share = get_package_share_directory('gazebo_ros')
 
-    # Path to URDF file
-    urdf_file = os.path.join(pkg_share, 'urdf', 'COD_2026_Balance_2_0.urdf')
+    # Path to xacro file
+    xacro_file = os.path.join(pkg_share, 'urdf', 'cod_balance_robot.xacro')
 
-    # Read URDF file and replace package://cod_2026_balance/ with absolute path
-    # This allows Gazebo to find mesh files while keeping package:// format in URDF
-    with open(urdf_file, 'r') as infp:
-        robot_desc = infp.read()
-    
-    # Remove XML encoding declaration to avoid spawn_entity.py parsing errors
-    if robot_desc.startswith('<?xml'):
-        robot_desc = robot_desc.split('?>', 1)[1].lstrip()
+    # Process xacro file to generate URDF
+    # xacro will automatically handle the include and resolve package:// paths
+    robot_desc = subprocess.run(
+        ['xacro', xacro_file],
+        capture_output=True,
+        text=True,
+        check=True
+    ).stdout
     
     # Replace package://cod_2026_balance/ with absolute path to package share directory
+    # This allows Gazebo to find mesh files
     robot_desc = robot_desc.replace('package://cod_2026_balance/', pkg_share + '/')
 
     # Start Gazebo with ROS plugins
