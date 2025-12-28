@@ -10,20 +10,28 @@ from launch_ros.actions import Node
 def generate_launch_description():
     # Get package directories
     pkg_share = get_package_share_directory('wl')
-    gazebo_ros_share = get_package_share_directory('gazebo_ros')
+    ros_gz_sim_share = get_package_share_directory('ros_gz_sim')
 
     # Path to URDF file
     urdf_file = os.path.join(pkg_share, 'urdf', 'wl.urdf')
 
-    # Read URDF file
+    # Read URDF file and replace package://wl/ with absolute path
+    # This allows Gazebo to find mesh files while keeping package:// format in URDF
     with open(urdf_file, 'r') as infp:
         robot_desc = infp.read()
+    
+    # Replace package://wl/ with absolute path to package share directory
+    robot_desc = robot_desc.replace('package://wl/', pkg_share + '/')
 
-    # Include Gazebo launch file
+    # Path to world file
+    world_file = os.path.join(pkg_share, 'worlds', 'default.sdf')
+
+    # Include Gazebo launch file with world file
     gazebo_launch = IncludeLaunchDescription(
         PythonLaunchDescriptionSource(
-            os.path.join(gazebo_ros_share, 'launch', 'gazebo.launch.py')
-        )
+            os.path.join(ros_gz_sim_share, 'launch', 'gz_sim.launch.py')
+        ),
+        launch_arguments={'gz_args': world_file}.items()
     )
 
     # Robot State Publisher node
@@ -48,22 +56,22 @@ def generate_launch_description():
 
     # Spawn robot in Gazebo
     spawn_entity_node = Node(
-        package='gazebo_ros',
-        executable='spawn_entity.py',
+        package='ros_gz_sim',
+        executable='create',
         name='spawn_model',
         arguments=[
-            '-entity', 'wl',
             '-topic', 'robot_description',
+            '-name', 'wl',
             '-x', '0',
             '-y', '0',
-            '-z', '0.1'
+            '-z', '0.2'
         ],
         output='screen'
     )
 
     # Fake joint calibration publisher (runs after spawn completes)
     calibration_publisher = ExecuteProcess(
-        cmd=['ros2', 'topic', 'pub', '/calibrated', 'std_msgs/msg/Bool', '{data: true}', '--once'],
+        cmd=['ros2', 'topic', 'pub', '/calibrated', 'std_msgs/msg/Bool', '{data: true}', '--once', '--no-wait'],
         output='screen'
     )
 

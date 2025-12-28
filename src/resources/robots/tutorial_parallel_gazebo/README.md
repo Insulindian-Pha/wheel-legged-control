@@ -1,0 +1,4 @@
+# tutorial_parallel_gazebo
+Gazebo中并联机构的添加
+
+主要内容在于URDF文件中的Gazebo标签中
