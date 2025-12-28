@@ -1,7 +1,6 @@
 <?xml version="1.0"?>
 <robot xmlns:xacro="http://www.ros.org/wiki/xacro">
 <!-- Gazebo配置文件 - 包含所有Gazebo特定的配置 -->
-<!-- 此文件通过xacro:include被包含在主xacro文件中 -->
 
 <!-- Gazebo材质定义 - 匹配MuJoCo中的颜色 -->
 <gazebo reference="base_link">
@@ -66,7 +65,7 @@
 
 <!-- Gazebo标签用于支持闭链机构仿真 -->
 <gazebo>
-  <!-- 左侧五连杆闭环约束1: 连接Left_front_child2_link和Left_rear_link -->
+  <!-- 左侧五连杆闭环约束1 连接Left_front_child2_link和Left_rear_link -->
   <joint name='Left_loop1_joint' type='revolute'>
     <pose relative_to='Left_rear_link'>-0.1005 -0.025 -0.0035 0 0 0</pose>
     <parent>Left_rear_link</parent>
@@ -86,7 +85,7 @@
     </axis>
   </joint>
 
-  <!-- 左侧五连杆闭环约束2: 连接Left_front_child3_link和Left_rear_child1_link -->
+  <!-- 左侧五连杆闭环约束2 连接Left_front_child3_link和Left_rear_child1_link -->
   <joint name='Left_loop2_joint' type='revolute'>
     <pose relative_to='Left_rear_child1_link'>-0.038 0 0.05 0 0 0</pose>
     <parent>Left_rear_child1_link</parent>
@@ -106,7 +105,7 @@
     </axis>
   </joint>
 
-  <!-- 右侧五连杆闭环约束1: 连接Right_front_child2_link和Right_rear_link -->
+  <!-- 右侧五连杆闭环约束1 连接Right_front_child2_link和Right_rear_link -->
   <joint name='Right_loop1_joint' type='revolute'>
     <pose relative_to='Right_rear_link'>-0.1 0.0225 -0.008 0 0 0</pose>
     <parent>Right_rear_link</parent>
@@ -126,7 +125,7 @@
     </axis>
   </joint>
 
-  <!-- 右侧五连杆闭环约束2: 连接Right_front_child3_link和Right_rear_child1_link -->
+  <!-- 右侧五连杆闭环约束2 连接Right_front_child3_link和Right_rear_child1_link -->
   <joint name='Right_loop2_joint' type='revolute'>
     <pose relative_to='Right_rear_child1_link'>-0.035 0 0.05 0 0 0</pose>
     <parent>Right_rear_child1_link</parent>
