@@ -38,22 +38,6 @@ def generate_launch_description():
         output='screen'
     )
 
-    # Joint State Publisher节点 - 合并ros2_control的关节状态与其他关节状态
-    # 订阅 /joint_states (来自ros2_control的joint_state_broadcaster), 合并后发布到 /joint_states_merged
-    joint_state_publisher_node = Node(
-        package='joint_state_publisher',
-        executable='joint_state_publisher',
-        parameters=[{
-            'robot_description': robot_desc,
-            'source_list': ['joint_states'],  # 订阅来自ros2_control的joint_states
-            'use_sim_time': True
-        }],
-        remappings=[
-            ('joint_states', 'joint_states_merged')  # 发布合并后的状态到不同的topic
-        ]
-    )
-
-    # Robot State Publisher节点 - 发布机器人描述和TF变换
     robot_state_publisher_node = Node(
         package='robot_state_publisher',
         executable='robot_state_publisher',
@@ -62,10 +46,20 @@ def generate_launch_description():
         parameters=[{
             'robot_description': robot_desc,
             'use_sim_time': True  # 使用Gazebo仿真时间
-        }],
-        remappings=[
-            ('joint_states', 'joint_states_merged')  # 订阅合并后的关节状态
-        ]
+        }]
+        # 直接订阅 /joint_states，不需要 remapping
+    )
+
+    joint_state_publisher_node = Node(
+        package='joint_state_publisher',
+        executable='joint_state_publisher',
+        name='joint_state_publisher',
+        parameters=[{
+            'robot_description': robot_desc,
+            'source_list': ['joint_states'],  # 订阅来自ros2_control的joint_states
+            'use_sim_time': True
+        }]
+
     )
 
     # 静态TF发布器 - base_link到base_footprint
@@ -130,6 +124,22 @@ def generate_launch_description():
         )
     )
 
+    # Control Converter Node - 将control_input_msgs转换为cmd_vel
+    control_converter_node = Node(
+        package='control_converter',
+        executable='control_converter',
+        name='control_converter',
+        parameters=[{
+            'max_linear_x': 1.0,
+            'max_linear_y': 1.0,
+            'max_angular_z': 1.0,
+            'control_input_topic': 'control_input',
+            'cmd_vel_topic': '/diff_drive_controller/cmd_vel',
+            'publish_rate': 50.0,
+            'use_sim_time': True
+        }]
+    )
+
     return LaunchDescription([
         # 启动Gazebo
         start_gazebo_cmd,
@@ -145,6 +155,9 @@ def generate_launch_description():
         # 延迟启动控制器
         delayed_joint_state_broadcaster,
         delayed_diff_drive_controller,
+        
+        # 控制转换节点
+        control_converter_node,
     ])
 
 

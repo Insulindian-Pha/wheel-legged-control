@@ -72,12 +72,28 @@ def generate_launch_description():
         ]
     )
 
+    # Control Converter Node - converts control_input_msgs to cmd_vel
+    control_converter_node = Node(
+        package='control_converter',
+        executable='control_converter',
+        name='control_converter',
+        parameters=[{
+            'max_linear_x': 1.0,
+            'max_linear_y': 1.0,
+            'max_angular_z': 1.0,
+            'control_input_topic': 'control_input',
+            'cmd_vel_topic': '/diff_drive_controller/cmd_vel',
+            'publish_rate': 50.0
+        }]
+    )
+
     return LaunchDescription([
         robot_state_publisher_node,
         controller_manager_node,
         joint_state_broadcaster_spawner,
         diff_drive_controller_spawner,
-        joint_state_publisher_node
+        joint_state_publisher_node,
+        control_converter_node
     ])
 
 # ros2 run teleop_twist_keyboard teleop_twist_keyboard --ros-args -r /cmd_vel:=/diff_drive_controller/cmd_vel -p stamped:=true
