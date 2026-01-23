@@ -16,14 +16,40 @@
             <hardware>
                 <plugin>gazebo_ros2_control/GazeboSystem</plugin>
             </hardware>
+            <joint name="Left_front_joint">
+                <command_interface name="effort" />
+                <state_interface name="position" />
+                <state_interface name="velocity" />
+                <state_interface name="effort" />
+            </joint>
+            <joint name="Left_rear_joint">
+                <command_interface name="effort" />
+                <state_interface name="position" />
+                <state_interface name="velocity" />
+                <state_interface name="effort" />
+            </joint>
             <joint name="Left_Wheel_joint">
                 <command_interface name="velocity" />
+                <command_interface name="effort" />
+                <state_interface name="position" />
+                <state_interface name="velocity" />
+                <state_interface name="effort" />
+            </joint>
+            <joint name="Right_front_joint">
+                <command_interface name="effort" />
+                <state_interface name="position" />
+                <state_interface name="velocity" />
+                <state_interface name="effort" />
+            </joint>
+            <joint name="Right_rear_joint">
+                <command_interface name="effort" />
                 <state_interface name="position" />
                 <state_interface name="velocity" />
                 <state_interface name="effort" />
             </joint>
             <joint name="Right_Wheel_joint">
                 <command_interface name="velocity" />
+                <command_interface name="effort" />
                 <state_interface name="position" />
                 <state_interface name="velocity" />
                 <state_interface name="effort" />
@@ -38,14 +64,40 @@
                 <plugin>mock_components/GenericSystem</plugin>
                 <param name="calculate_dynamics">true</param>
             </hardware>
+            <joint name="Left_front_joint">
+                <command_interface name="effort" />
+                <state_interface name="position" />
+                <state_interface name="velocity" />
+                <state_interface name="effort" />
+            </joint>
+            <joint name="Left_rear_joint">
+                <command_interface name="effort" />
+                <state_interface name="position" />
+                <state_interface name="velocity" />
+                <state_interface name="effort" />
+            </joint>
             <joint name="Left_Wheel_joint">
                 <command_interface name="velocity" />
+                <command_interface name="effort" />
+                <state_interface name="position" />
+                <state_interface name="velocity" />
+                <state_interface name="effort" />
+            </joint>
+            <joint name="Right_front_joint">
+                <command_interface name="effort" />
+                <state_interface name="position" />
+                <state_interface name="velocity" />
+                <state_interface name="effort" />
+            </joint>
+            <joint name="Right_rear_joint">
+                <command_interface name="effort" />
                 <state_interface name="position" />
                 <state_interface name="velocity" />
                 <state_interface name="effort" />
             </joint>
             <joint name="Right_Wheel_joint">
                 <command_interface name="velocity" />
+                <command_interface name="effort" />
                 <state_interface name="position" />
                 <state_interface name="velocity" />
                 <state_interface name="effort" />

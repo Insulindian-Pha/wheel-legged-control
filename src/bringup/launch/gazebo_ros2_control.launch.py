@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
 Gazebo with ROS2 Control Launch File
-启动Gazebo仿真环境并集成ros2_control控制器
+启动Gazebo仿真环境并集成ros2_control力矩控制器
 """
 
 import os
@@ -97,12 +97,12 @@ def generate_launch_description():
         output='screen'
     )
 
-    # Diff Drive Controller Spawner - 差速驱动控制器
-    diff_drive_controller_spawner = Node(
+    # Joint Group Effort Controller Spawner - 力矩控制器
+    joint_group_effort_controller_spawner = Node(
         package='controller_manager',
         executable='spawner',
         arguments=[
-            'diff_drive_controller',
+            'joint_group_effort_controller',
             '--controller-manager', '/controller_manager'
         ],
         parameters=[{'use_sim_time': True}],
@@ -116,25 +116,48 @@ def generate_launch_description():
         actions=[joint_state_broadcaster_spawner]
     )
 
-    # 然后启动diff_drive_controller
-    delayed_diff_drive_controller = RegisterEventHandler(
+    # 然后启动joint_group_effort_controller
+    delayed_joint_group_effort_controller = RegisterEventHandler(
         event_handler=OnProcessExit(
             target_action=joint_state_broadcaster_spawner,
-            on_exit=[diff_drive_controller_spawner]
+            on_exit=[joint_group_effort_controller_spawner]
         )
     )
 
-    # Control Converter Node - 将control_input_msgs转换为cmd_vel
+    # Joint Torque Controller Node - 读取关节状态并发布力矩命令
+    joint_torque_controller_node = Node(
+        package='joint_torque_controller',
+        executable='joint_torque_controller',
+        name='joint_torque_controller',
+        parameters=[{
+            'joint_names': [
+                'Left_front_joint',
+                'Left_rear_joint',
+                'Left_Wheel_joint',
+                'Right_front_joint',
+                'Right_rear_joint',
+                'Right_Wheel_joint'
+            ],
+            'joint_state_topic': '/joint_states',
+            'torque_command_topic': '/joint_group_effort_controller/commands',
+            'controller_name': 'joint_group_effort_controller',
+            'publish_rate': 500.0,
+            'max_torque': 100.0,
+            'use_sim_time': True
+        }]
+    )
+
+    # Control Converter Node - 将control_input_msgs转换为关节力矩命令
     control_converter_node = Node(
         package='control_converter',
         executable='control_converter',
         name='control_converter',
         parameters=[{
-            'max_linear_x': 1.0,
-            'max_linear_y': 1.0,
-            'max_angular_z': 1.0,
+            'max_torque_wheel': 100.0,   # 轮子关节最大力矩 (Nm)
+            'max_torque_front': 100.0,  # 前关节最大力矩 (Nm)
+            'max_torque_rear': 100.0,   # 后关节最大力矩 (Nm)
             'control_input_topic': 'control_input',
-            'cmd_vel_topic': '/diff_drive_controller/cmd_vel',
+            'torque_command_topic': '/joint_torque_controller/torque_commands',
             'publish_rate': 50.0,
             'use_sim_time': True
         }]
@@ -154,10 +177,13 @@ def generate_launch_description():
         
         # 延迟启动控制器
         delayed_joint_state_broadcaster,
-        delayed_diff_drive_controller,
+        delayed_joint_group_effort_controller,
         
         # 控制转换节点
         control_converter_node,
+        
+        # 关节力矩控制器节点
+        joint_torque_controller_node,
     ])
 
 

@@ -46,6 +46,12 @@ def generate_launch_description():
         arguments=['diff_drive_controller']
     )
 
+    joint_group_effort_controller_spawner = Node(
+        package='controller_manager',
+        executable='spawner',
+        arguments=['joint_group_effort_controller']
+    )
+
     # Joint State Publisher to merge joint states from ros2_control with default states for other joints
     # It subscribes to /joint_states (from joint_state_broadcaster) and merges with default states (0)
     # for all other joints defined in URDF, then publishes merged states to /joint_states_merged
@@ -72,18 +78,40 @@ def generate_launch_description():
         ]
     )
 
-    # Control Converter Node - converts control_input_msgs to cmd_vel
+    # Control Converter Node - converts control_input_msgs to joint torque commands
     control_converter_node = Node(
         package='control_converter',
         executable='control_converter',
         name='control_converter',
         parameters=[{
-            'max_linear_x': 1.0,
-            'max_linear_y': 1.0,
-            'max_angular_z': 1.0,
+            'max_torque_wheel': 10.0,   # Maximum torque for wheel joints (Nm)
+            'max_torque_front': 10.0,  # Maximum torque for front joints (Nm)
+            'max_torque_rear': 10.0,   # Maximum torque for rear joints (Nm)
             'control_input_topic': 'control_input',
-            'cmd_vel_topic': '/diff_drive_controller/cmd_vel',
+            'torque_command_topic': '/joint_torque_controller/torque_commands',
             'publish_rate': 50.0
+        }]
+    )
+
+    # Joint Torque Controller Node - reads joint states and publishes torque commands
+    joint_torque_controller_node = Node(
+        package='joint_torque_controller',
+        executable='joint_torque_controller',
+        name='joint_torque_controller',
+        parameters=[{
+            'joint_names': [
+                'Left_front_joint',
+                'Left_rear_joint',
+                'Left_Wheel_joint',
+                'Right_front_joint',
+                'Right_rear_joint',
+                'Right_Wheel_joint'
+            ],
+            'joint_state_topic': '/joint_states',
+            'torque_command_topic': '/joint_group_effort_controller/commands',
+            'controller_name': 'joint_group_effort_controller',
+            'publish_rate': 50.0,
+            'max_torque': 30.0
         }]
     )
 
@@ -92,8 +120,10 @@ def generate_launch_description():
         controller_manager_node,
         joint_state_broadcaster_spawner,
         diff_drive_controller_spawner,
+        joint_group_effort_controller_spawner,
         joint_state_publisher_node,
-        control_converter_node
+        control_converter_node,
+        joint_torque_controller_node
     ])
 
 # ros2 run teleop_twist_keyboard teleop_twist_keyboard --ros-args -r /cmd_vel:=/diff_drive_controller/cmd_vel -p stamped:=true
