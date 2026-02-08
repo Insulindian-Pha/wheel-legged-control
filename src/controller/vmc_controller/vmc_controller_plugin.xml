@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<library path="vmc_controller">
+  <class name="vmc_controller/VMCController" type="vmc_controller::VMCController" base_class_type="controller_interface::ControllerInterface">
+    <description>
+      VMC Controller for leg linkage control using Virtual Model Control algorithm
+    </description>
+  </class>
+</library>
+

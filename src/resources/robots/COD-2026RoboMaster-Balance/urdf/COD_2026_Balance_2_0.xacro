@@ -100,7 +100,7 @@
       lower="0"
       upper="0"
       effort="100"
-      velocity="0" />
+      velocity="100" />
   </joint>
   <link
     name="Left_front_child1_link">
@@ -332,7 +332,7 @@
       lower="0"
       upper="0"
       effort="100"
-      velocity="0" />
+      velocity="100" />
   </joint>
   <link
     name="Left_rear_child1_link">
@@ -448,7 +448,7 @@
       lower="0"
       upper="0"
       effort="100"
-      velocity="0" />
+      velocity="100" />
   </joint>
   <link
     name="Right_front_link">
@@ -506,7 +506,7 @@
       lower="0"
       upper="0"
       effort="100"
-      velocity="0" />
+      velocity="100" />
   </joint>
   <link
     name="Right_front_child1_link">
@@ -738,7 +738,7 @@
       lower="0"
       upper="0"
       effort="100"
-      velocity="0" />
+      velocity="100" />
   </joint>
   <link
     name="Right_rear_child1_link">
@@ -854,6 +854,6 @@
       lower="0"
       upper="0"
       effort="100"
-      velocity="0" />
+      velocity="100" />
   </joint>
 </robot>

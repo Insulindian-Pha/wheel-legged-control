@@ -72,6 +72,7 @@ void ControlConverter::control_input_callback(const control_input_msgs::msg::Inp
   // lt/rt typically range from 1.0 (released) to -1.0 (fully pressed)
   // We map: 1.0 (released) -> 0 torque, -1.0 (pressed) -> max_torque
   // Formula: (1.0 - value) * 0.5 maps [1.0, -1.0] to [0.0, 1.0]
+  // double front_combined = (msg->rx + msg->lx) * 0.5;
   double left_wheel_torque = (1.0 - msg->lt) * 0.5 * max_torque_wheel_;   // Left_Wheel_joint (index 2)
   double right_wheel_torque = (1.0 - msg->rt) * 0.5 * max_torque_wheel_;  // Right_Wheel_joint (index 5)
 

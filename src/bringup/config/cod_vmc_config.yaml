@@ -1,0 +1,41 @@
+vmc_controller_node:
+  ros__parameters:
+    # 关节名称配置
+    left_front_joint_name: "Left_front_joint"
+    left_rear_joint_name: "Left_rear_joint"
+    right_front_joint_name: "Right_front_joint"
+    right_rear_joint_name: "Right_rear_joint"
+
+    # 话题配置
+    joint_state_topic: "/joint_states"
+    imu_topic: "/imu/data"
+    force_command_topic: "/vmc_controller/force_command"
+    torque_command_topic: "/joint_torque_controller/torque_commands"
+
+    # 控制参数
+    publish_rate: 500.0  # 发布频率 (Hz)
+    max_torque: 90.0    # 最大力矩限制 (Nm)
+
+    # VMC杆长参数 (单位: m)
+    l1: 0.1  # 单位为m
+    l2: 0.22   # 单位为m
+    l3: 0.22   # 单位为m
+    l4: 0.1  # 单位为m
+    l5: 0.0001   # AE长度，单位为m
+
+    # F0和Tp默认值
+    # F0: 五连杆机构末端沿腿的推力 (N)
+    # Tp: 沿中心轴的力矩 (Nm)
+    left_F0: 0.0   # 左腿推力默认值
+    left_Tp: 0.0   # 左腿力矩默认值
+    right_F0: 0.0  # 右腿推力默认值
+    right_Tp: 0.0  # 右腿力矩默认值
+
+    # 关节初始角度偏置 (单位: rad)
+    # 这些值将被从反馈角度中减去，使初始角度成为0点
+    # 如果设置为0.0，则使用当前关节位置作为初始角度（需要在启动时手动设置）
+    left_front_joint_offset: 1.477   # 左前关节初始角度偏置
+    left_rear_joint_offset: 1.545    # 左后关节初始角度偏置
+    right_front_joint_offset: -1.477  # 右前关节初始角度偏置
+    right_rear_joint_offset: -1.545  # 右后关节初始角度偏置
+

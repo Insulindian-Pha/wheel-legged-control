@@ -63,7 +63,9 @@
   <material>Gazebo/Grey</material>
 </gazebo>
 
-<!-- Gazebo关节配置 - 覆盖URDF中的限制，使关节可以受控
+<!-- Gazebo关节配置 - 包含关节摩擦力和动力学参数 -->
+
+<!-- 左侧前腿关节 -->
 <gazebo reference="Left_front_joint">
   <implicitSpringDamper>1</implicitSpringDamper>
   <stopCfm>0.00001</stopCfm>
@@ -77,10 +79,62 @@
   </limit>
   <dynamics>
     <damping>0.1</damping>
-    <friction>0.01</friction>
+    <friction>0.1</friction>
   </dynamics>
 </gazebo>
 
+<gazebo reference="Left_front_child1_joint">
+  <implicitSpringDamper>1</implicitSpringDamper>
+  <stopCfm>0.00001</stopCfm>
+  <stopErp>0.1</stopErp>
+  <fudgeFactor>0.5</fudgeFactor>
+  <limit>
+    <lower>-3.14</lower>
+    <upper>3.14</upper>
+    <effort>30</effort>
+    <velocity>10</velocity>
+  </limit>
+  <dynamics>
+    <damping>0.1</damping>
+    <friction>0.1</friction>
+  </dynamics>
+</gazebo>
+
+<gazebo reference="Left_front_child2_joint">
+  <implicitSpringDamper>1</implicitSpringDamper>
+  <stopCfm>0.00001</stopCfm>
+  <stopErp>0.1</stopErp>
+  <fudgeFactor>0.5</fudgeFactor>
+  <limit>
+    <lower>-3.14</lower>
+    <upper>3.14</upper>
+    <effort>30</effort>
+    <velocity>10</velocity>
+  </limit>
+  <dynamics>
+    <damping>0.1</damping>
+    <friction>0.1</friction>
+  </dynamics>
+</gazebo>
+
+<gazebo reference="Left_front_child3_joint">
+  <implicitSpringDamper>1</implicitSpringDamper>
+  <stopCfm>0.00001</stopCfm>
+  <stopErp>0.1</stopErp>
+  <fudgeFactor>0.5</fudgeFactor>
+  <limit>
+    <lower>-3.14</lower>
+    <upper>3.14</upper>
+    <effort>30</effort>
+    <velocity>10</velocity>
+  </limit>
+  <dynamics>
+    <damping>0.1</damping>
+    <friction>0.1</friction>
+  </dynamics>
+</gazebo>
+
+<!-- 左侧后腿关节 -->
 <gazebo reference="Left_rear_joint">
   <implicitSpringDamper>1</implicitSpringDamper>
   <stopCfm>0.00001</stopCfm>
@@ -94,10 +148,28 @@
   </limit>
   <dynamics>
     <damping>0.1</damping>
-    <friction>0.01</friction>
+    <friction>0.1</friction>
   </dynamics>
 </gazebo>
 
+<gazebo reference="Left_rear_child1_joint">
+  <implicitSpringDamper>1</implicitSpringDamper>
+  <stopCfm>0.00001</stopCfm>
+  <stopErp>0.1</stopErp>
+  <fudgeFactor>0.5</fudgeFactor>
+  <limit>
+    <lower>-3.14</lower>
+    <upper>3.14</upper>
+    <effort>30</effort>
+    <velocity>10</velocity>
+  </limit>
+  <dynamics>
+    <damping>0.1</damping>
+    <friction>0.1</friction>
+  </dynamics>
+</gazebo>
+
+<!-- 左侧轮子关节 -->
 <gazebo reference="Left_Wheel_joint">
   <implicitSpringDamper>1</implicitSpringDamper>
   <stopCfm>0.00001</stopCfm>
@@ -109,10 +181,11 @@
   </limit>
   <dynamics>
     <damping>0.01</damping>
-    <friction>0.01</friction>
+    <friction>0.1</friction>
   </dynamics>
 </gazebo>
 
+<!-- 右侧前腿关节 -->
 <gazebo reference="Right_front_joint">
   <implicitSpringDamper>1</implicitSpringDamper>
   <stopCfm>0.00001</stopCfm>
@@ -126,10 +199,62 @@
   </limit>
   <dynamics>
     <damping>0.1</damping>
-    <friction>0.01</friction>
+    <friction>0.1</friction>
   </dynamics>
 </gazebo>
 
+<gazebo reference="Right_front_child1_joint">
+  <implicitSpringDamper>1</implicitSpringDamper>
+  <stopCfm>0.00001</stopCfm>
+  <stopErp>0.1</stopErp>
+  <fudgeFactor>0.5</fudgeFactor>
+  <limit>
+    <lower>-3.14</lower>
+    <upper>3.14</upper>
+    <effort>30</effort>
+    <velocity>10</velocity>
+  </limit>
+  <dynamics>
+    <damping>0.1</damping>
+    <friction>0.1</friction>
+  </dynamics>
+</gazebo>
+
+<gazebo reference="Right_front_child2_joint">
+  <implicitSpringDamper>1</implicitSpringDamper>
+  <stopCfm>0.00001</stopCfm>
+  <stopErp>0.1</stopErp>
+  <fudgeFactor>0.5</fudgeFactor>
+  <limit>
+    <lower>-3.14</lower>
+    <upper>3.14</upper>
+    <effort>30</effort>
+    <velocity>10</velocity>
+  </limit>
+  <dynamics>
+    <damping>0.1</damping>
+    <friction>0.1</friction>
+  </dynamics>
+</gazebo>
+
+<gazebo reference="Right_front_joint3_joint">
+  <implicitSpringDamper>1</implicitSpringDamper>
+  <stopCfm>0.00001</stopCfm>
+  <stopErp>0.1</stopErp>
+  <fudgeFactor>0.5</fudgeFactor>
+  <limit>
+    <lower>-3.14</lower>
+    <upper>3.14</upper>
+    <effort>30</effort>
+    <velocity>10</velocity>
+  </limit>
+  <dynamics>
+    <damping>0.1</damping>
+    <friction>0.1</friction>
+  </dynamics>
+</gazebo>
+
+<!-- 右侧后腿关节 -->
 <gazebo reference="Right_rear_joint">
   <implicitSpringDamper>1</implicitSpringDamper>
   <stopCfm>0.00001</stopCfm>
@@ -143,10 +268,28 @@
   </limit>
   <dynamics>
     <damping>0.1</damping>
-    <friction>0.01</friction>
+    <friction>0.1</friction>
   </dynamics>
 </gazebo>
 
+<gazebo reference="Right_rear_child1_joint">
+  <implicitSpringDamper>1</implicitSpringDamper>
+  <stopCfm>0.00001</stopCfm>
+  <stopErp>0.1</stopErp>
+  <fudgeFactor>0.5</fudgeFactor>
+  <limit>
+    <lower>-3.14</lower>
+    <upper>3.14</upper>
+    <effort>30</effort>
+    <velocity>10</velocity>
+  </limit>
+  <dynamics>
+    <damping>0.1</damping>
+    <friction>0.1</friction>
+  </dynamics>
+</gazebo>
+
+<!-- 右侧轮子关节 -->
 <gazebo reference="Right_Wheel_joint">
   <implicitSpringDamper>1</implicitSpringDamper>
   <stopCfm>0.00001</stopCfm>
@@ -158,9 +301,9 @@
   </limit>
   <dynamics>
     <damping>0.01</damping>
-    <friction>0.01</friction>
+    <friction>0.1</friction>
   </dynamics>
-</gazebo> -->
+</gazebo>
 
 <!-- Gazebo标签用于支持闭链机构仿真 -->
 <gazebo>
@@ -178,8 +321,8 @@
         <velocity>0</velocity>
       </limit>
       <dynamics>
-        <damping>0.1</damping>
-        <friction>0.01</friction>
+        <damping>0.5</damping>
+        <friction>0.1</friction>
       </dynamics>
     </axis>
   </joint>
@@ -198,8 +341,8 @@
         <velocity>0</velocity>
       </limit>
       <dynamics>
-        <damping>0.1</damping>
-        <friction>0.01</friction>
+        <damping>0.5</damping>
+        <friction>0.1</friction>
       </dynamics>
     </axis>
   </joint>
@@ -218,8 +361,8 @@
         <velocity>0</velocity>
       </limit>
       <dynamics>
-        <damping>0.1</damping>
-        <friction>0.01</friction>
+        <damping>0.5</damping>
+        <friction>0.1</friction>
       </dynamics>
     </axis>
   </joint>
@@ -238,8 +381,8 @@
         <velocity>0</velocity>
       </limit>
       <dynamics>
-        <damping>0.1</damping>
-        <friction>0.01</friction>
+        <damping>0.5</damping>
+        <friction>0.1</friction>
       </dynamics>
     </axis>
   </joint>

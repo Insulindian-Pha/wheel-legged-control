@@ -1,10 +1,12 @@
 #!/usr/bin/env python3
 """
-Gazebo with ROS2 Control Launch File
-启动Gazebo仿真环境并集成ros2_control力矩控制器
+Gazebo with ROS2 Control VMC Launch File
+启动Gazebo仿真环境，机器人固定在半空中，使用VMC控制器
+用于观察VMC控制效果
 """
 
 import os
+import re
 import subprocess
 from ament_index_python.packages import get_package_share_directory
 from launch import LaunchDescription
@@ -31,6 +33,32 @@ def generate_launch_description():
     
     # 替换package://路径为file://绝对路径,使Gazebo和RViz都能找到mesh文件
     robot_desc = robot_desc.replace('package://cod_2026_balance/', 'file://' + pkg_share + '/')
+    
+    # 按照博客方法：创建world link，然后用fixed关节将base_link固定到world
+    # 在robot标签开头添加world link和固定关节
+    world_fixed_xml = '''  <!-- World link to fix robot in air for VMC observation -->
+  <link name="world"/>
+  
+  <joint name="world_base_fixed_joint" type="fixed">
+    <parent link="world"/>
+    <child link="base_link"/>
+    <origin xyz="0 0 0" rpy="0 0 0"/>
+  </joint>
+  
+'''
+    
+    # 在</robot>标签前添加Gazebo配置，确保world link是静态的
+    gazebo_fixed_xml = '''  <!-- Gazebo plugin to make world link static -->
+  <gazebo reference="world">
+    <static>true</static>
+  </gazebo>
+'''
+    
+    # 在robot标签后插入world link（使其成为根link）
+    robot_desc = re.sub(r'(<robot[^>]*>)', r'\1\n' + world_fixed_xml, robot_desc, count=1)
+    
+    # 在</robot>标签前插入Gazebo配置
+    robot_desc = robot_desc.replace('</robot>', gazebo_fixed_xml + '</robot>')
 
     # 启动Gazebo(使用单个gazebo命令,加载ROS插件)
     start_gazebo_cmd = ExecuteProcess(
@@ -47,7 +75,6 @@ def generate_launch_description():
             'robot_description': robot_desc,
             'use_sim_time': True  # 使用Gazebo仿真时间
         }]
-        # 直接订阅 /joint_states，不需要 remapping
     )
 
     joint_state_publisher_node = Node(
@@ -59,7 +86,6 @@ def generate_launch_description():
             'source_list': ['joint_states'],  # 订阅来自ros2_control的joint_states
             'use_sim_time': True
         }]
-
     )
 
     # 静态TF发布器 - base_link到base_footprint
@@ -70,7 +96,7 @@ def generate_launch_description():
         arguments=['--x', '0', '--y', '0', '--z', '0', '--roll', '0', '--pitch', '0', '--yaw', '0', '--frame-id', 'base_link', '--child-frame-id', 'base_footprint']
     )
 
-    # 在Gazebo中生成机器人模型
+    # 在Gazebo中生成机器人模型 - 固定在半空中
     spawn_entity_node = Node(
         package='gazebo_ros',
         executable='spawn_entity.py',
@@ -80,7 +106,7 @@ def generate_launch_description():
             '-topic', 'robot_description',
             '-x', '0',
             '-y', '0',
-            '-z', '0.5'  # 在地面上方0.5米生成
+            '-z', '1.0'  # 在半空中1.0米高度生成
         ],
         output='screen'
     )
@@ -97,12 +123,12 @@ def generate_launch_description():
         output='screen'
     )
 
-    # Joint Group Effort Controller Spawner - 力矩控制器
-    joint_group_effort_controller_spawner = Node(
+    # VMC Controller Spawner - VMC控制器
+    vmc_controller_spawner = Node(
         package='controller_manager',
         executable='spawner',
         arguments=[
-            'joint_group_effort_controller',
+            'vmc_controller',
             '--controller-manager', '/controller_manager'
         ],
         parameters=[{'use_sim_time': True}],
@@ -116,51 +142,12 @@ def generate_launch_description():
         actions=[joint_state_broadcaster_spawner]
     )
 
-    # 然后启动joint_group_effort_controller
-    delayed_joint_group_effort_controller = RegisterEventHandler(
+    # 然后启动vmc_controller
+    delayed_vmc_controller = RegisterEventHandler(
         event_handler=OnProcessExit(
             target_action=joint_state_broadcaster_spawner,
-            on_exit=[joint_group_effort_controller_spawner]
+            on_exit=[vmc_controller_spawner]
         )
-    )
-
-    # Joint Torque Controller Node - 读取关节状态并发布力矩命令
-    joint_torque_controller_node = Node(
-        package='joint_torque_controller',
-        executable='joint_torque_controller',
-        name='joint_torque_controller',
-        parameters=[{
-            'joint_names': [
-                'Left_front_joint',
-                'Left_rear_joint',
-                'Left_Wheel_joint',
-                'Right_front_joint',
-                'Right_rear_joint',
-                'Right_Wheel_joint'
-            ],
-            'joint_state_topic': '/joint_states',
-            'torque_command_topic': '/joint_group_effort_controller/commands',
-            'controller_name': 'joint_group_effort_controller',
-            'publish_rate': 500.0,
-            'max_torque': 20.0,
-            'use_sim_time': True
-        }]
-    )
-
-    # Control Converter Node - 将control_input_msgs转换为关节力矩命令
-    control_converter_node = Node(
-        package='control_converter',
-        executable='control_converter',
-        name='control_converter',
-        parameters=[{
-            'max_torque_wheel': 5.0,   # 轮子关节最大力矩 (Nm)
-            'max_torque_front': 20.0,  # 前关节最大力矩 (Nm)
-            'max_torque_rear': 20.0,   # 后关节最大力矩 (Nm)
-            'control_input_topic': 'control_input',
-            'torque_command_topic': '/joint_torque_controller/torque_commands',
-            'publish_rate': 20.0,
-            'use_sim_time': True
-        }]
     )
 
     return LaunchDescription([
@@ -172,26 +159,21 @@ def generate_launch_description():
         joint_state_publisher_node,
         static_tf_node,
         
-        # 在Gazebo中生成机器人
+        # 在Gazebo中生成机器人（固定在半空中）
         spawn_entity_node,
         
         # 延迟启动控制器
         delayed_joint_state_broadcaster,
-        delayed_joint_group_effort_controller,
-        
-        # 控制转换节点
-        control_converter_node,
-        
-        # 关节力矩控制器节点
-        joint_torque_controller_node,
+        delayed_vmc_controller,
     ])
 
 
 # 使用说明:
 # 1. 启动仿真:
-#    ros2 launch bringup gazebo_ros2_control.launch.py
+#    ros2 launch bringup gazebo_ros2_vmc.launch.py
 #
-# 2. 使用键盘控制机器人:
-#    ros2 run teleop_twist_keyboard teleop_twist_keyboard --ros-args -r /cmd_vel:=/diff_drive_controller/cmd_vel -p stamped:=true
-
+# 2. 发布VMC力命令:
+#    ros2 topic pub /vmc_controller/force_command std_msgs/msg/Float64MultiArray "{data: [left_F0, left_Tp, right_F0, right_Tp]}"
+#
+# 3. 机器人固定在半空中，可以观察VMC控制效果，不受重力影响
 
