@@ -14,42 +14,58 @@
                 <param name="headless">false</param>
                 <param name="sim_speed_factor">1.0</param>
             </hardware>
-            <joint name="Left_front_joint">
+            <joint name="jIJ">
                 <command_interface name="effort" />
                 <state_interface name="position" />
                 <state_interface name="velocity" />
                 <state_interface name="effort" />
             </joint>
-            <joint name="Left_rear_joint">
+            <joint name="jIO">
                 <command_interface name="effort" />
                 <state_interface name="position" />
                 <state_interface name="velocity" />
                 <state_interface name="effort" />
             </joint>
-            <joint name="Left_Wheel_joint">
+            <joint name="jwheel_left">
                 <command_interface name="effort" />
                 <state_interface name="position" />
                 <state_interface name="velocity" />
                 <state_interface name="effort" />
             </joint>
-            <joint name="Right_front_joint">
+            <joint name="jAB">
                 <command_interface name="effort" />
                 <state_interface name="position" />
                 <state_interface name="velocity" />
                 <state_interface name="effort" />
             </joint>
-            <joint name="Right_rear_joint">
+            <joint name="jAG">
                 <command_interface name="effort" />
                 <state_interface name="position" />
                 <state_interface name="velocity" />
                 <state_interface name="effort" />
             </joint>
-            <joint name="Right_Wheel_joint">
+            <joint name="jwheel_right">
                 <command_interface name="effort" />
                 <state_interface name="position" />
                 <state_interface name="velocity" />
                 <state_interface name="effort" />
             </joint>
+            
+            <!-- IMU Sensor -->
+            <sensor name="imu_sensor">
+                <param name="mujoco_type">imu</param>
+                <param name="mujoco_sensor_name">imu</param>
+                <state_interface name="orientation.x"/>
+                <state_interface name="orientation.y"/>
+                <state_interface name="orientation.z"/>
+                <state_interface name="orientation.w"/>
+                <state_interface name="angular_velocity.x"/>
+                <state_interface name="angular_velocity.y"/>
+                <state_interface name="angular_velocity.z"/>
+                <state_interface name="linear_acceleration.x"/>
+                <state_interface name="linear_acceleration.y"/>
+                <state_interface name="linear_acceleration.z"/>
+            </sensor>
         </ros2_control>
     </xacro:if>
 
@@ -62,7 +78,7 @@
         </gazebo>
 
         <!-- ROS2 Control for Gazebo -->
-        <ros2_control name="CodBalanceHardwareInterface" type="system">
+        <ros2_control name="WheelLegHardwareInterface" type="system">
             <hardware>
                 <plugin>gazebo_ros2_control/GazeboSystem</plugin>
             </hardware>
@@ -110,7 +126,7 @@
     <xacro:unless value="$(arg use_gazebo)">
         <xacro:unless value="$(arg use_mujoco)">
             <!-- ROS2 Control for Real Hardware/Mock -->
-        <ros2_control name="CodBalanceHardwareInterface" type="system">
+        <ros2_control name="WheelLegHardwareInterface" type="system">
             <hardware>
                 <plugin>mock_components/GenericSystem</plugin>
                 <param name="calculate_dynamics">true</param>
@@ -158,3 +174,4 @@
     </xacro:unless>
 
 </robot>
+

@@ -1,0 +1,41 @@
+<?xml version="1.0"?>
+<robot name="WheelLegRobot" xmlns:xacro="http://www.ros.org/wiki/xacro">
+
+    <!-- 包含 ros2_control 配置 -->
+    <xacro:include filename="$(find wheel_leg_mujoco)/urdf/ros2_control.xacro"/>
+
+    <!-- 基本机器人描述 - 由于使用 MuJoCo 模型，这里只定义基本的 base_link -->
+    <link name="base_link">
+        <inertial>
+            <origin xyz="0 0 0" rpy="0 0 0" />
+            <mass value="8.4" />
+            <inertia
+                ixx="2.8641"
+                ixy="0.0"
+                ixz="0.0"
+                iyy="2.8736"
+                iyz="0.0"
+                izz="3.0472" />
+        </inertial>
+        <visual>
+            <origin xyz="0 0 0" rpy="0 0 0" />
+            <geometry>
+                <box size="0.4 0.4 0.2" />
+            </geometry>
+            <material name="base_material">
+                <color rgba="0.2 0.2 0.25 1" />
+            </material>
+        </visual>
+        <collision>
+            <origin xyz="0 0 0" rpy="0 0 0" />
+            <geometry>
+                <box size="0.4 0.4 0.2" />
+            </geometry>
+        </collision>
+    </link>
+
+    <!-- 注意：实际的机器人几何和关节定义在 MuJoCo 的 robot.xml 文件中 -->
+    <!-- 这个 URDF 主要用于 ros2_control 配置 -->
+
+</robot>
+

@@ -26,7 +26,7 @@
     
     <body name="Left_front_link" pos="-0.0193914 -0.1837 -0.05">
       <inertial pos="0.032009 -0.002932 -0.003563" quat="0.472786 0.528055 0.525808 0.470275" mass="0.7" diaginertia="0.000152893 0.000125485 2.9469e-05" />
-      <joint name="Left_front_joint" pos="0 0 0" axis="0 1 0" damping="0.1"  range="-1 1"/>
+      <joint name="Left_front_joint" pos="0 0 0" axis="0 1 0" damping="0.1"/>
       <geom type="mesh" rgba="0.89804 0.91765 0.92941 1" mesh="Left_front_link" />
       
       <body name="Left_front_child1_link" pos="0.0993862 0.00145 -0.011063">
@@ -54,7 +54,7 @@
     
     <body name="Left_rear_link" pos="-0.0193914 -0.1597 -0.05">
       <inertial pos="-0.088717 -0.014548 -0.002836" quat="0.504264 0.494926 0.493803 0.506877" mass="0.7" diaginertia="0.0015394 0.00142065 0.000124696" />
-      <joint name="Left_rear_joint" pos="0 0 0" axis="0 -1 0" damping="0.1"  range="-1 1"/>
+      <joint name="Left_rear_joint" pos="0 0 0" axis="0 -1 0" damping="0.1"/>
       <site name="Left_rear_site1" pos="-0.1005 -0.025 -0.0035" size="0.005" rgba="1 1 0 1"/>           
       <geom type="mesh" rgba="1 1 1 1" mesh="Left_rear_link" />
       
@@ -76,7 +76,7 @@
     
     <body name="Right_front_link" pos="-0.0193914 0.1817 -0.05">
       <inertial pos="0.025832 0.0043356 -0.0054908" quat="0.443683 0.548461 0.550587 0.446308" mass="0.7" diaginertia="0.000152213 0.00012511 2.90948e-05" />
-      <joint name="Right_front_joint" pos="0 0 0" axis="0 -1 0" damping="0.1" range="-1 1" ref="-0.1"/>
+      <joint name="Right_front_joint" pos="0 0 0" axis="0 -1 0" damping="0.1" ref="-0.1"/>
       <geom type="mesh" rgba="0.89804 0.91765 0.92941 1" mesh="Right_front_link" />
       
       <body name="Right_front_child1_link" pos="0.0978147 0.00055 -0.0207914">
@@ -103,7 +103,7 @@
     
     <body name="Right_rear_link" pos="-0.0193914 0.1597 -0.05">
       <inertial pos="-0.088564 0.014548 -0.0059225" quat="0.515415 0.48495 0.486028 0.512784" mass="0.7" diaginertia="0.0015394 0.00142064 0.000124697" />
-      <joint name="Right_rear_joint" pos="0 0 0" axis="0 1 0" damping="0.1" range="-1 1" ref="0.0"/>
+      <joint name="Right_rear_joint" pos="0 0 0" axis="0 1 0" damping="0.1" ref="0.0"/>
       <site name="Right_rear_site1" pos="-0.1 0.0225 -0.008" size="0.005" rgba="1 1 0 1"/>         
       <geom type="mesh" rgba="1 1 1 1" mesh="Right_rear_link" />
       

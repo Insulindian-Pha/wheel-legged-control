@@ -6,6 +6,7 @@
 #include "vmc_controller/vmc_controller.h"
 #include <algorithm>
 #include <cmath>
+#include <iomanip>
 #include <limits>
 
 namespace vmc_controller
@@ -275,10 +276,13 @@ controller_interface::return_type VMCController::update(const rclcpp::Time& time
   double right_rear_pos = right_rear_pos_raw + right_rear_joint_offset_;
 
   // Update joint angles for VMC calculation
-  left_leg_.setPhi1(M_PI / 2.0f + left_front_pos);
-  left_leg_.setPhi4(M_PI / 2.0f + left_rear_pos);
-  right_leg_.setPhi1(M_PI / 2.0f + right_front_pos);
-  right_leg_.setPhi4(M_PI / 2.0f + right_rear_pos);
+  // 注意：phi1需要加π，但phi4不需要加π（与Simulation.py保持一致）
+  // Simulation.py中：右腿使用jAB(phi1)和jAG(phi4)，左腿使用jIO(phi1)和jIJ(phi4)
+  // 统一顺序：左腿使用左腿关节(jIJ, jIO)，右腿使用右腿关节(jAB, jAG)
+  left_leg_.setPhi1(M_PI + left_rear_pos);     // jIO -> phi1 (左后关节)
+  left_leg_.setPhi4(left_front_pos);           // jIJ -> phi4 (左前关节，不加π)
+  right_leg_.setPhi1(M_PI + right_front_pos);  // jAB -> phi1 (右前关节)
+  right_leg_.setPhi4(right_rear_pos);          // jAG -> phi4 (右后关节，不加π)
 
   // Set F0 and Tp
   left_leg_.setF0(left_F0_);
@@ -295,8 +299,26 @@ controller_interface::return_type VMCController::update(const rclcpp::Time& time
   right_leg_.calc2();
 
   right_leg_.getL0();
-  std::cout << "right_leg_.getL0 = " << right_leg_.getL0() << "\t"
-            << "letf_leg_.getL0 = " << left_leg_.getL0() << std::endl;
+
+  // Debug output (only print occasionally to avoid spam)
+  static int debug_counter = 0;
+  if (debug_counter++ % 100 == 0)  // Print every 100 updates (~0.2 second at 500Hz)
+  {
+    std::cout << std::fixed << std::setprecision(3);
+    std::cout << "=== VMC Debug Info ===" << std::endl;
+    std::cout << "Raw positions:     LF=" << std::setw(7) << left_front_pos_raw << ", LR=" << std::setw(7)
+              << left_rear_pos_raw << ", RF=" << std::setw(7) << right_front_pos_raw << ", RR=" << std::setw(7)
+              << right_rear_pos_raw << std::endl;
+    std::cout << "Offsets:           LF=" << std::setw(7) << left_front_joint_offset_ << ", LR=" << std::setw(7)
+              << left_rear_joint_offset_ << ", RF=" << std::setw(7) << right_front_joint_offset_
+              << ", RR=" << std::setw(7) << right_rear_joint_offset_ << std::endl;
+    std::cout << "After offset:      LF=" << std::setw(7) << left_front_pos << ", LR=" << std::setw(7) << left_rear_pos
+              << ", RF=" << std::setw(7) << right_front_pos << ", RR=" << std::setw(7) << right_rear_pos << std::endl;
+    std::cout << "Leg lengths:       LL0=" << std::setw(7) << left_leg_.getL0() << ", RL0=" << std::setw(7)
+              << right_leg_.getL0() << std::endl;
+    std::cout << "=====================" << std::endl;
+  }
+
   // Clamp and set torques
   double left_front_torque = std::clamp(left_leg_.getTorqueFront(), -max_torque_, max_torque_);
   double left_rear_torque = std::clamp(left_leg_.getTorqueRear(), -max_torque_, max_torque_);

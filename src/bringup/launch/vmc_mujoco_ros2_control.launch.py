@@ -33,17 +33,17 @@ from launch_ros.substitutions import FindPackageShare
 
 def launch_setup(context, *args, **kwargs):
 
-    wheel_leg_pkg_share = FindPackageShare("wheel_leg_mujoco")
+    cod_balance_pkg_share = FindPackageShare("cod_2026_balance")
     
     # Get MJCF model file path
-    mujoco_model_path = PathJoinSubstitution([wheel_leg_pkg_share, "MJCF", "robot.xml"])
+    mujoco_model_path = PathJoinSubstitution([cod_balance_pkg_share, "MJCF", "COD-2026RoboMaster-Balance.xml"])
 
     # Build robot description
     robot_description_content = Command(
         [
             PathJoinSubstitution([FindExecutable(name="xacro")]),
             " ",
-            PathJoinSubstitution([wheel_leg_pkg_share, "urdf", "wheel_leg_robot.xacro"]),
+            PathJoinSubstitution([cod_balance_pkg_share, "urdf", "cod_balance_robot.xacro"]),
             " use_mujoco:=true",
             " mujoco_model:=",
             mujoco_model_path,
@@ -53,10 +53,10 @@ def launch_setup(context, *args, **kwargs):
     robot_description_str = robot_description_content.perform(context)
     
     # Replace package:// paths with absolute paths for mesh files
-    wheel_leg_pkg_share_path = wheel_leg_pkg_share.perform(context)
+    cod_balance_pkg_share_path = cod_balance_pkg_share.perform(context)
     robot_description_str = robot_description_str.replace(
-        'package://wheel_leg_mujoco/', 
-        'file://' + wheel_leg_pkg_share_path + '/'
+        'package://cod_2026_balance/', 
+        'file://' + cod_balance_pkg_share_path + '/'
     )
 
     robot_description = {"robot_description": ParameterValue(value=robot_description_str, value_type=str)}
@@ -72,7 +72,7 @@ def launch_setup(context, *args, **kwargs):
         )
     )
 
-    parameters_file = PathJoinSubstitution([FindPackageShare("bringup"), "config", "wheel_leg_controllers.yaml"])
+    parameters_file = PathJoinSubstitution([FindPackageShare("bringup"), "config", "cod_balance_controllers.yaml"])
 
     nodes.append(
         Node(
@@ -92,7 +92,7 @@ def launch_setup(context, *args, **kwargs):
     )
 
     # Add controller spawners
-    controllers_to_spawn = ["joint_state_broadcaster", "imu_broadcaster", "vmc_controller"]
+    controllers_to_spawn = ["joint_state_broadcaster", "vmc_controller"]
     for controller in controllers_to_spawn:
         nodes.append(
             Node(
@@ -113,3 +113,5 @@ def generate_launch_description():
             OpaqueFunction(function=launch_setup),
         ]
     )
+
+

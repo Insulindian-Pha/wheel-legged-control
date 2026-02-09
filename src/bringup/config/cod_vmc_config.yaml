@@ -21,7 +21,7 @@ vmc_controller_node:
     l2: 0.22   # 单位为m
     l3: 0.22   # 单位为m
     l4: 0.1  # 单位为m
-    l5: 0.0001   # AE长度，单位为m
+    l5: 0.0   # AE长度，单位为m
 
     # F0和Tp默认值
     # F0: 五连杆机构末端沿腿的推力 (N)
@@ -32,10 +32,11 @@ vmc_controller_node:
     right_Tp: 0.0  # 右腿力矩默认值
 
     # 关节初始角度偏置 (单位: rad)
-    # 这些值将被从反馈角度中减去，使初始角度成为0点
+    # 这些值将被加到反馈角度中，使初始角度成为0点
+    # 计算公式: pos = pos_raw + offset，要使pos=0，则 offset = -pos_raw
     # 如果设置为0.0，则使用当前关节位置作为初始角度（需要在启动时手动设置）
-    left_front_joint_offset: 1.477   # 左前关节初始角度偏置
-    left_rear_joint_offset: 1.545    # 左后关节初始角度偏置
-    right_front_joint_offset: -1.477  # 右前关节初始角度偏置
-    right_rear_joint_offset: -1.545  # 右后关节初始角度偏置
+    left_front_joint_offset: 0.100000  # 左前关节
+    left_rear_joint_offset: -0.100000  # 左后关节
+    right_front_joint_offset: 0.100000  # 右前关节
+    right_rear_joint_offset: -0.100000  # 右后关节
 

@@ -57,11 +57,11 @@ vmc_controller:
     max_torque: 90.0  # 最大力矩限制 (Nm)
 
     # VMC杆长参数 (单位: m)
-    l1: 0.1
-    l2: 0.22
-    l3: 0.22
-    l4: 0.1
-    l5: 0.0
+    l5: 0.0  
+    l1: 0.215
+    l4: 0.215
+    l2: 0.258
+    l3: 0.258
 
     # F0和Tp默认值
     left_F0: 0.0
@@ -70,9 +70,10 @@ vmc_controller:
     right_Tp: 0.0
 
     # 关节初始角度偏置 (单位: rad)
-    # 这些值将被从反馈角度中减去，使初始角度成为0点
+    # 这些值将被加到反馈角度中，使初始角度成为0点
+    # 计算公式: pos = pos_raw + offset，要使pos=0，则 offset = -pos_raw
     # 如果设置为0.0，则使用当前关节位置作为初始角度（需要在启动时手动设置）
-    left_front_joint_offset: 1.477   # 左前关节初始角度偏置
-    left_rear_joint_offset: 1.545    # 左后关节初始角度偏置
-    right_front_joint_offset: -1.477  # 右前关节初始角度偏置
-    right_rear_joint_offset: -1.545  # 右后关节初始角度偏置
+    left_front_joint_offset: 0.003   # 左前关节初始角度偏置
+    left_rear_joint_offset: -1.3    # 左后关节初始角度偏置
+    right_front_joint_offset: 0.027  # 右前关节初始角度偏置
+    right_rear_joint_offset: 1.3  # 右后关节初始角度偏置
