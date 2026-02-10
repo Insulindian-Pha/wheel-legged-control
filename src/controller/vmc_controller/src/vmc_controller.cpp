@@ -162,8 +162,6 @@ controller_interface::CallbackReturn VMCController::on_configure(const rclcpp_li
   RCLCPP_INFO(get_node()->get_logger(), "Joint invert signs: LF=%.1f, LR=%.1f, RF=%.1f, RR=%.1f",
               left_front_joint_invert_sign_, left_rear_joint_invert_sign_, right_front_joint_invert_sign_,
               right_rear_joint_invert_sign_);
-  RCLCPP_INFO(get_node()->get_logger(), "Debug mode: %s, Print frequency: %.1f Hz",
-              enable_debug_ ? "enabled" : "disabled", debug_print_frequency_);
 
   return controller_interface::CallbackReturn::SUCCESS;
 }

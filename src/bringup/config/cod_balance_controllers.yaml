@@ -97,7 +97,7 @@ vmc_controller:
     right_desired_l0: 0.15
 
     # PID参数配置
-    pid_controller:
+    pid_gains:
       l0_control:
         # 左腿pid
         left_leg:
