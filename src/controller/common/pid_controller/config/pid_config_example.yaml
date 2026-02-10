@@ -1,0 +1,41 @@
+# /**:
+#   ros__parameters:
+#     # PID参数配置示例
+#     # 参数命名格式：{prefix}.p, {prefix}.i, {prefix}.d 等
+#     # 
+#     # 示例1：单个关节的位置PID
+#     pid_gains:
+#       position:
+#         Left_front_joint:
+#           p: 100.0          # 比例增益
+#           i: 0.0            # 积分增益
+#           d: 10.0           # 微分增益
+#           u_clamp_max: 50.0 # 输出上限
+#           u_clamp_min: -50.0 # 输出下限
+#           i_clamp_max: 5.0  # 积分限幅上限
+#           i_clamp_min: -5.0 # 积分限幅下限（可选，通常使用i_clamp_max的负值）
+#           integral_separation_threshold: 0.5  # 积分分离阈值（可选，0表示禁用）
+        
+#         Left_rear_joint:
+#           p: 100.0
+#           i: 0.0
+#           d: 10.0
+#           u_clamp_max: 50.0
+#           u_clamp_min: -50.0
+#           i_clamp_max: 5.0
+#           i_clamp_min: -5.0
+#           integral_separation_threshold: 0.5
+    
+#     # 示例2：速度PID
+#     pid_gains:
+#       velocity:
+#         Left_Wheel_joint:
+#           p: 30.0
+#           i: 0.1
+#           d: 1.0
+#           u_clamp_max: 100.0
+#           u_clamp_min: -100.0
+#           i_clamp_max: 10.0
+#           i_clamp_min: -10.0
+#           integral_separation_threshold: 0.0  # 0表示禁用积分分离
+

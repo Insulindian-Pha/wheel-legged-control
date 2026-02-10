@@ -219,4 +219,29 @@ double VMCLeg::getL0() const
   return L0_;
 }
 
+double VMCLeg::getPhi0() const
+{
+  return phi0;
+}
+
+double VMCLeg::getJ11() const
+{
+  return j11;
+}
+
+double VMCLeg::getJ12() const
+{
+  return j12;
+}
+
+double VMCLeg::getJ21() const
+{
+  return j21;
+}
+
+double VMCLeg::getJ22() const
+{
+  return j22;
+}
+
 }  // namespace vmc_controller

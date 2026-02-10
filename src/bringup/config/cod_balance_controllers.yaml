@@ -19,7 +19,7 @@ controller_manager:
 
 imu_broadcaster:
   ros__parameters:
-    imu_sensor_name: "imu_sensor"
+    sensor_name: "imu_sensor"
     topic_name: "/imu/data"
     frame_id: "base_link"
 
@@ -63,7 +63,7 @@ vmc_controller:
     force_command_topic: "/vmc_controller/force_command"
 
     # 控制参数
-    max_torque: 90.0  # 最大力矩限制 (Nm)
+    max_torque: 90.0 # 最大力矩限制 (Nm)
 
     # VMC杆长参数 (单位: m)
     l1: 0.216280
@@ -80,18 +80,42 @@ vmc_controller:
 
     # 关节初始角度偏置 (单位: rad)
     # 这些值将被加到反馈角度中，使初始角度成为0点
-    # 计算公式: pos = pos_raw + offset，要使pos=0，则 offset = -pos_raw
-    # 如果设置为0.0，则使用当前关节位置作为初始角度（需要在启动时手动设置）
-    left_front_joint_offset: 0.15  # 左前关节初始角度偏置
-    left_rear_joint_offset:   0.0  # 左后关节初始角度偏置
+    left_front_joint_offset: 0.15 # 左前关节初始角度偏置
+    left_rear_joint_offset: 0.0 # 左后关节初始角度偏置
     right_front_joint_offset: -0.112 # 右前关节初始角度偏置
-    right_rear_joint_offset: 0.0  # 右后关节初始角度偏置
+    right_rear_joint_offset: 0.0 # 右后关节初始角度偏置
 
     # 关节角度取反配置（用于匹配VMC坐标系）
     # 1.0: 不取反, -1.0: 取反
-    # 对于right_front_joint_invert_sign，已经包含了phi1计算符号的调整
-    # COD模型：axis="0 -1 0"需要取反(-1.0)，phi1需要M_PI-(-1.0*pos)=M_PI+pos，所以最终符号为1.0
-    left_front_joint_invert_sign: 1.0   # Left_front_joint: axis="0 1 0" (正Y轴，不取反)
-    left_rear_joint_invert_sign: -1.0   # Left_rear_joint: axis="0 -1 0" (负Y轴，需要取反)
-    right_front_joint_invert_sign: 1.0  # Right_front_joint: 合并了轴方向(-1.0)和phi1符号(-1.0)，结果为1.0
-    right_rear_joint_invert_sign: -1.0  # Right_rear_joint: axis="0 1 0" (正Y轴但角度定义不一致，需要取反)
+    left_front_joint_invert_sign: 1.0
+    left_rear_joint_invert_sign: -1.0
+    right_front_joint_invert_sign: 1.0
+    right_rear_joint_invert_sign: -1.0
+
+    # 期望的默认L0
+    left_desired_l0: 0.15
+    right_desired_l0: 0.15
+
+    # PID参数配置
+    pid_controller:
+      l0_control:
+        # 左腿pid
+        left_leg:
+          target: 0.15
+          kp: -100.0
+          ki: 0.0
+          kd: -10.0
+          u_clamp_max: 50.0
+          u_clamp_min: -50.0
+          i_clamp_max: 5.0
+          i_separation_threshold: 0.0
+        # 右腿pid
+        right_leg:
+          target: 0.15
+          kp: 100.0
+          ki: 0.0
+          kd: 10.0
+          u_clamp_max: 50.0
+          u_clamp_min: -50.0
+          i_clamp_max: 5.0
+          i_separation_threshold: 0.0

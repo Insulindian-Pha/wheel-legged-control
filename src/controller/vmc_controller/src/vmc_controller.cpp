@@ -6,6 +6,7 @@
 #include "vmc_controller/vmc_controller.h"
 #include <algorithm>
 #include <cmath>
+#include <iostream>
 #include <iomanip>
 
 namespace vmc_controller
@@ -28,6 +29,9 @@ VMCController::VMCController()
   , left_rear_joint_invert_sign_(1.0)
   , right_front_joint_invert_sign_(1.0)
   , right_rear_joint_invert_sign_(1.0)
+  , enable_debug_(false)
+  , debug_print_frequency_(10.0)
+  , debug_print_counter_(0)
 {
 }
 
@@ -57,6 +61,10 @@ controller_interface::CallbackReturn VMCController::on_init()
     auto_declare<double>("right_F0", 0.0);
     auto_declare<double>("right_Tp", 0.0);
 
+    // PID控制L0相关参数
+    auto_declare<double>("left_desired_l0", 0.2);   // 期望的左腿L0值（米）
+    auto_declare<double>("right_desired_l0", 0.2);  // 期望的右腿L0值（米）
+
     // 关节初始角度偏置（用于将初始角度设为0点）
     auto_declare<double>("left_front_joint_offset", 0.0);
     auto_declare<double>("left_rear_joint_offset", 0.0);
@@ -68,6 +76,10 @@ controller_interface::CallbackReturn VMCController::on_init()
     auto_declare<double>("left_rear_joint_invert_sign", 1.0);
     auto_declare<double>("right_front_joint_invert_sign", 1.0);
     auto_declare<double>("right_rear_joint_invert_sign", 1.0);
+
+    // 调试参数
+    auto_declare<bool>("enable_debug", true);
+    auto_declare<double>("debug_print_frequency", 1000.0);
   }
   catch (const std::exception& e)
   {
@@ -100,6 +112,10 @@ controller_interface::CallbackReturn VMCController::on_configure(const rclcpp_li
   right_F0_ = get_node()->get_parameter("right_F0").as_double();
   right_Tp_ = get_node()->get_parameter("right_Tp").as_double();
 
+  // 读取PID控制相关参数
+  left_desired_l0_ = get_node()->get_parameter("left_desired_l0").as_double();
+  right_desired_l0_ = get_node()->get_parameter("right_desired_l0").as_double();
+
   // 读取关节初始角度偏置
   left_front_joint_offset_ = get_node()->get_parameter("left_front_joint_offset").as_double();
   left_rear_joint_offset_ = get_node()->get_parameter("left_rear_joint_offset").as_double();
@@ -112,9 +128,21 @@ controller_interface::CallbackReturn VMCController::on_configure(const rclcpp_li
   right_front_joint_invert_sign_ = get_node()->get_parameter("right_front_joint_invert_sign").as_double();
   right_rear_joint_invert_sign_ = get_node()->get_parameter("right_rear_joint_invert_sign").as_double();
 
+  // 读取调试参数
+  enable_debug_ = get_node()->get_parameter("enable_debug").as_bool();
+  debug_print_frequency_ = get_node()->get_parameter("debug_print_frequency").as_double();
+
   // Initialize VMC leg structures
   left_leg_.init_leg_length(l1_, l2_, l3_, l4_, l5_);
   right_leg_.init_leg_length(l1_, l2_, l3_, l4_, l5_);
+
+  // Initialize PID controllers for L0 control (if enabled)
+  left_leg_l0_pid_ = std::make_shared<PID::PidROS>(get_node(), "pid_gains.l0_control.left_leg", true, true);
+  right_leg_l0_pid_ = std::make_shared<PID::PidROS>(get_node(), "pid_gains.l0_control.right_leg", true, true);
+
+  RCLCPP_INFO(get_node()->get_logger(), "PID control for F0 enabled");
+  RCLCPP_INFO(get_node()->get_logger(), "Left desired L0: %.3f m", left_desired_l0_);
+  RCLCPP_INFO(get_node()->get_logger(), "Right desired L0: %.3f m", right_desired_l0_);
 
   // Create subscriptions for IMU and force commands
   imu_subscription_ = get_node()->create_subscription<sensor_msgs::msg::Imu>(
@@ -134,6 +162,8 @@ controller_interface::CallbackReturn VMCController::on_configure(const rclcpp_li
   RCLCPP_INFO(get_node()->get_logger(), "Joint invert signs: LF=%.1f, LR=%.1f, RF=%.1f, RR=%.1f",
               left_front_joint_invert_sign_, left_rear_joint_invert_sign_, right_front_joint_invert_sign_,
               right_rear_joint_invert_sign_);
+  RCLCPP_INFO(get_node()->get_logger(), "Debug mode: %s, Print frequency: %.1f Hz",
+              enable_debug_ ? "enabled" : "disabled", debug_print_frequency_);
 
   return controller_interface::CallbackReturn::SUCCESS;
 }
@@ -293,6 +323,20 @@ controller_interface::return_type VMCController::update(const rclcpp::Time& time
   double right_front_pos = right_front_joint_invert_sign_ * (right_front_pos_raw + right_front_joint_offset_);
   double right_rear_pos = right_rear_joint_invert_sign_ * (right_rear_pos_raw + right_rear_joint_offset_);
 
+  // Normalize joint angles to [-π, π] range to prevent angle accumulation
+  auto normalize_angle = [](double angle) {
+    while (angle > M_PI)
+      angle -= 2.0 * M_PI;
+    while (angle < -M_PI)
+      angle += 2.0 * M_PI;
+    return angle;
+  };
+
+  left_front_pos = normalize_angle(left_front_pos);
+  left_rear_pos = normalize_angle(left_rear_pos);
+  right_front_pos = normalize_angle(right_front_pos);
+  right_rear_pos = normalize_angle(right_rear_pos);
+
   // Update joint angles for VMC calculation
   double left_phi1 = M_PI + left_rear_pos;     // phi1 (左后关节)
   double left_phi4 = left_front_pos;           // phi4 (左前关节，不加π)
@@ -304,45 +348,38 @@ controller_interface::return_type VMCController::update(const rclcpp::Time& time
   right_leg_.setPhi1(right_phi1);
   right_leg_.setPhi4(right_phi4);
 
+  // Calculate VMC for legs
+  double left_current_l0 = left_leg_.getL0();
+  double right_current_l0 = right_leg_.getL0();
+
+  left_F0_ = left_leg_l0_pid_->update(left_current_l0, time);
+  right_F0_ = right_leg_l0_pid_->update(right_current_l0, time);
+
   // Set F0 and Tp
   left_leg_.setF0(left_F0_);
-  left_leg_.setTp(left_Tp_);
   right_leg_.setF0(right_F0_);
-  right_leg_.setTp(right_Tp_);
 
   // Calculate VMC for left leg
+  // If PID was used, we already called calc1Left above, but we need to recalculate with the new F0
   left_leg_.calc1Left(pitch_, pitch_gyro_, dt);
   left_leg_.calc2();
 
   // Calculate VMC for right leg
+  // If PID was used, we already called calc1Right above, but we need to recalculate with the new F0
   right_leg_.calc1Right(pitch_, pitch_gyro_, dt);
   right_leg_.calc2();
 
-  // Debug output (only print occasionally to avoid spam)
-  static int debug_counter = 0;
-  if (debug_counter++ % 100 == 0)  // Print every 100 updates (~0.2 second at 500Hz)
-  {
-    std::cout << std::fixed << std::setprecision(3);
-    std::cout << "=== VMC Debug Info ===" << std::endl;
-    std::cout << "Raw positions:     LF=" << std::setw(7) << left_front_pos_raw << ", LR=" << std::setw(7)
-              << left_rear_pos_raw << ", RF=" << std::setw(7) << right_front_pos_raw << ", RR=" << std::setw(7)
-              << right_rear_pos_raw << std::endl;
-    std::cout << "Offsets:           LF=" << std::setw(7) << left_front_joint_offset_ << ", LR=" << std::setw(7)
-              << left_rear_joint_offset_ << ", RF=" << std::setw(7) << right_front_joint_offset_
-              << ", RR=" << std::setw(7) << right_rear_joint_offset_ << std::endl;
-    std::cout << "After offset:      LF=" << std::setw(7) << left_front_pos << ", LR=" << std::setw(7) << left_rear_pos
-              << ", RF=" << std::setw(7) << right_front_pos << ", RR=" << std::setw(7) << right_rear_pos << std::endl;
-    std::cout << "Leg lengths:       LL0=" << std::setw(7) << left_leg_.getL0() << ", RL0=" << std::setw(7)
-              << right_leg_.getL0() << std::endl;
-
-    std::cout << "=====================" << std::endl;
-  }
-
   // Clamp and set torques
-  double left_front_torque = std::clamp(left_leg_.getTorqueFront(), -max_torque_, max_torque_);
-  double left_rear_torque = std::clamp(left_leg_.getTorqueRear(), -max_torque_, max_torque_);
-  double right_front_torque = std::clamp(right_leg_.getTorqueFront(), -max_torque_, max_torque_);
-  double right_rear_torque = std::clamp(right_leg_.getTorqueRear(), -max_torque_, max_torque_);
+  double left_front_torque_raw = std::clamp(left_leg_.getTorqueFront(), -max_torque_, max_torque_);
+  double left_rear_torque_raw = std::clamp(left_leg_.getTorqueRear(), -max_torque_, max_torque_);
+  double right_front_torque_raw = std::clamp(right_leg_.getTorqueFront(), -max_torque_, max_torque_);
+  double right_rear_torque_raw = std::clamp(right_leg_.getTorqueRear(), -max_torque_, max_torque_);
+
+  // Apply invert sign to torques (same as joint positions, because torque direction should match joint axis direction)
+  double left_front_torque = left_front_joint_invert_sign_ * left_front_torque_raw;
+  double left_rear_torque = left_rear_joint_invert_sign_ * left_rear_torque_raw;
+  double right_front_torque = right_front_joint_invert_sign_ * right_front_torque_raw;
+  double right_rear_torque = right_rear_joint_invert_sign_ * right_rear_torque_raw;
 
   // Set command values
   left_front_joint_cmd_[0].get().set_value(left_front_torque);
@@ -397,6 +434,26 @@ void VMCController::extract_pitch_from_imu(const sensor_msgs::msg::Imu::SharedPt
 {
   pitch = quaternion_to_pitch(msg->orientation.x, msg->orientation.y, msg->orientation.z, msg->orientation.w);
   pitch_gyro = msg->angular_velocity.y;
+}
+
+bool VMCController::is_valid_number(double value, const std::string& name) const
+{
+  if (std::isnan(value))
+  {
+    std::cout << name << " is NaN" << std::endl;
+    return false;
+  }
+  if (std::isinf(value))
+  {
+    std::cout << name << " is Inf" << std::endl;
+    return false;
+  }
+  if (std::abs(value) > 1e10)
+  {
+    std::cout << name << " is too large: " << std::scientific << std::setprecision(6) << value << std::endl;
+    return false;
+  }
+  return true;
 }
 
 controller_interface::InterfaceConfiguration VMCController::command_interface_configuration() const

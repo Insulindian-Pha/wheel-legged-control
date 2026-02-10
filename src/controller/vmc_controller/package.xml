@@ -15,6 +15,7 @@
   <depend>controller_interface</depend>
   <depend>hardware_interface</depend>
   <depend>pluginlib</depend>
+  <depend>pid_controller</depend>
 
   <export>
     <build_type>ament_cmake</build_type>

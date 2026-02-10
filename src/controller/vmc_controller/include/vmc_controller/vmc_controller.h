@@ -19,6 +19,7 @@
 #include "sensor_msgs/msg/imu.hpp"
 #include "std_msgs/msg/float64_multi_array.hpp"
 #include "vmc_controller/vmc_calc.h"
+#include "pid_ros.hpp"
 
 namespace vmc_controller
 {
@@ -77,6 +78,14 @@ protected:
   double right_Tp_;
   bool received_force_command_;
 
+  // PID controllers for L0 control (F0 calculation)
+  std::shared_ptr<PID::PidROS> left_leg_l0_pid_;
+  std::shared_ptr<PID::PidROS> right_leg_l0_pid_;
+
+  // Desired L0 values
+  double left_desired_l0_;
+  double right_desired_l0_;
+
   // Parameters
   std::string imu_topic_;
   std::string force_command_topic_;
@@ -109,6 +118,15 @@ protected:
 
   // State
   rclcpp::Time last_update_time_;
+
+  // Debug related members
+  bool enable_debug_;
+  double debug_print_frequency_;
+  uint64_t debug_print_counter_;
+  rclcpp::Time last_debug_print_time_;
+
+  // Debug functions
+  bool is_valid_number(double value, const std::string& name) const;
 };
 
 }  // namespace vmc_controller

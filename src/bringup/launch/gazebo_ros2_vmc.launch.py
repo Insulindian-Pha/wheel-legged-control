@@ -14,7 +14,6 @@ from launch.actions import ExecuteProcess, RegisterEventHandler, TimerAction
 from launch.event_handlers import OnProcessExit
 from launch_ros.actions import Node
 
-
 def generate_launch_description():
     # 获取包路径
     pkg_share = get_package_share_directory('cod_2026_balance')

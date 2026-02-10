@@ -16,6 +16,7 @@ find_package(controller_interface REQUIRED)
 find_package(hardware_interface REQUIRED)
 find_package(pluginlib REQUIRED)
 find_package(rclcpp_lifecycle REQUIRED)
+find_package(pid_controller REQUIRED)
 
 # Build the controller library
 add_library(vmc_controller SHARED
@@ -34,6 +35,7 @@ ament_target_dependencies(
         hardware_interface
         pluginlib
         rclcpp_lifecycle
+        pid_controller
 )
 
 # Plugin export

@@ -43,6 +43,11 @@ public:
   double getTheta() const;
   double getDTheta() const;
   double getL0() const;
+  double getPhi0() const;
+  double getJ11() const;
+  double getJ12() const;
+  double getJ21() const;
+  double getJ22() const;
 
 private:
   // 左右两腿的公共参数，固定不变
