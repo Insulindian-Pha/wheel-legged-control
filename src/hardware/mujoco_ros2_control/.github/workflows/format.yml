@@ -1,0 +1,34 @@
+name: format
+
+on:
+  push:
+    tags:
+      - '*'
+    branches:
+      - humble
+      - jazzy
+      - '*-devel'
+  pull_request:
+    branches:
+      - '*'
+  workflow_dispatch:
+
+# Do not run multiple jobs for the same branch
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  pre-commit:
+    name: pre-commit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-python@v6
+      - uses: pre-commit/action@v3.0.1
+
+  markdown-link-check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+      - uses: tcort/github-action-markdown-link-check@v1
