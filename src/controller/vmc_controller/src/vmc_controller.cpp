@@ -21,6 +21,10 @@ VMCController::VMCController()
   , right_F0_(0.0)
   , right_Tp_(0.0)
   , received_force_command_(false)
+  , left_desired_l0_(0.2)
+  , right_desired_l0_(0.2)
+  , left_desired_theta_(0.0)
+  , right_desired_theta_(0.0)
   , left_front_joint_offset_(0.0)
   , left_rear_joint_offset_(0.0)
   , right_front_joint_offset_(0.0)
@@ -64,6 +68,10 @@ controller_interface::CallbackReturn VMCController::on_init()
     // PID控制L0相关参数
     auto_declare<double>("left_desired_l0", 0.2);   // 期望的左腿L0值（米）
     auto_declare<double>("right_desired_l0", 0.2);  // 期望的右腿L0值（米）
+
+    // PID控制theta相关参数
+    auto_declare<double>("left_desired_theta", 0.0);   // 期望的左腿theta值（弧度）
+    auto_declare<double>("right_desired_theta", 0.0);  // 期望的右腿theta值（弧度）
 
     // 关节初始角度偏置（用于将初始角度设为0点）
     auto_declare<double>("left_front_joint_offset", 0.0);
@@ -115,6 +123,8 @@ controller_interface::CallbackReturn VMCController::on_configure(const rclcpp_li
   // 读取PID控制相关参数
   left_desired_l0_ = get_node()->get_parameter("left_desired_l0").as_double();
   right_desired_l0_ = get_node()->get_parameter("right_desired_l0").as_double();
+  left_desired_theta_ = get_node()->get_parameter("left_desired_theta").as_double();
+  right_desired_theta_ = get_node()->get_parameter("right_desired_theta").as_double();
 
   // 读取关节初始角度偏置
   left_front_joint_offset_ = get_node()->get_parameter("left_front_joint_offset").as_double();
@@ -140,9 +150,16 @@ controller_interface::CallbackReturn VMCController::on_configure(const rclcpp_li
   left_leg_l0_pid_ = std::make_shared<PID::PidROS>(get_node(), "pid_gains.l0_control.left_leg", true, true);
   right_leg_l0_pid_ = std::make_shared<PID::PidROS>(get_node(), "pid_gains.l0_control.right_leg", true, true);
 
+  // Initialize PID controllers for theta control (Tp calculation)
+  left_leg_theta_pid_ = std::make_shared<PID::PidROS>(get_node(), "pid_gains.theta_control.left_leg", true, true);
+  right_leg_theta_pid_ = std::make_shared<PID::PidROS>(get_node(), "pid_gains.theta_control.right_leg", true, true);
+
   RCLCPP_INFO(get_node()->get_logger(), "PID control for F0 enabled");
   RCLCPP_INFO(get_node()->get_logger(), "Left desired L0: %.3f m", left_desired_l0_);
   RCLCPP_INFO(get_node()->get_logger(), "Right desired L0: %.3f m", right_desired_l0_);
+  RCLCPP_INFO(get_node()->get_logger(), "PID control for Tp enabled");
+  RCLCPP_INFO(get_node()->get_logger(), "Left desired theta: %.3f rad", left_desired_theta_);
+  RCLCPP_INFO(get_node()->get_logger(), "Right desired theta: %.3f rad", right_desired_theta_);
 
   // Create subscriptions for IMU and force commands
   imu_subscription_ = get_node()->create_subscription<sensor_msgs::msg::Imu>(
@@ -346,24 +363,37 @@ controller_interface::return_type VMCController::update(const rclcpp::Time& time
   right_leg_.setPhi1(right_phi1);
   right_leg_.setPhi4(right_phi4);
 
-  // Calculate VMC for legs
+  // Calculate VMC for legs (first pass to get L0 and theta)
+  // Note: We need to set F0 first (use previous value or 0) to calculate theta
+  left_leg_.setF0(left_F0_);
+  right_leg_.setF0(right_F0_);
+  left_leg_.calc1Left(pitch_, pitch_gyro_, dt);
+  right_leg_.calc1Right(pitch_, pitch_gyro_, dt);
+
+  // Get current L0 and theta values
   double left_current_l0 = left_leg_.getL0();
   double right_current_l0 = right_leg_.getL0();
+  double left_current_theta = left_leg_.getTheta();
+  double right_current_theta = right_leg_.getTheta();
 
+  // Calculate F0 using PID with L0 as feedback
   left_F0_ = left_leg_l0_pid_->update(left_current_l0, time);
   right_F0_ = right_leg_l0_pid_->update(right_current_l0, time);
+
+  // Calculate Tp using PID with theta as feedback
+  left_Tp_ = left_leg_theta_pid_->update(left_current_theta, time);
+  right_Tp_ = right_leg_theta_pid_->update(right_current_theta, time);
 
   // Set F0 and Tp
   left_leg_.setF0(left_F0_);
   right_leg_.setF0(right_F0_);
+  left_leg_.setTp(left_Tp_);
+  right_leg_.setTp(right_Tp_);
 
-  // Calculate VMC for left leg
-  // If PID was used, we already called calc1Left above, but we need to recalculate with the new F0
+  // Recalculate VMC with updated F0 and Tp
   left_leg_.calc1Left(pitch_, pitch_gyro_, dt);
   left_leg_.calc2();
 
-  // Calculate VMC for right leg
-  // If PID was used, we already called calc1Right above, but we need to recalculate with the new F0
   right_leg_.calc1Right(pitch_, pitch_gyro_, dt);
   right_leg_.calc2();
 

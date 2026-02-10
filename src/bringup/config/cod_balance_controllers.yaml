@@ -114,7 +114,26 @@ vmc_controller:
           target: 0.15
           kp: 100.0
           ki: 0.0
-          kd: 10.0
+          kd: -5.0
+          u_clamp_max: 50.0
+          u_clamp_min: -50.0
+          i_clamp_max: 5.0
+          i_separation_threshold: 0.0
+      theta_control:
+        left_leg:
+          target: 0.0 # 期望的theta值（弧度）
+          kp: -10.0
+          ki: 0.0
+          kd: -5.0
+          u_clamp_max: 50.0
+          u_clamp_min: -50.0
+          i_clamp_max: 5.0
+          i_separation_threshold: 0.0
+        right_leg:
+          target: 0.0 # 期望的theta值（弧度）
+          kp: -10.0
+          ki: 0.0
+          kd: -5.0
           u_clamp_max: 50.0
           u_clamp_min: -50.0
           i_clamp_max: 5.0

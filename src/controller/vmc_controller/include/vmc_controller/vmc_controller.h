@@ -82,9 +82,17 @@ protected:
   std::shared_ptr<PID::PidROS> left_leg_l0_pid_;
   std::shared_ptr<PID::PidROS> right_leg_l0_pid_;
 
+  // PID controllers for theta control (Tp calculation)
+  std::shared_ptr<PID::PidROS> left_leg_theta_pid_;
+  std::shared_ptr<PID::PidROS> right_leg_theta_pid_;
+
   // Desired L0 values
   double left_desired_l0_;
   double right_desired_l0_;
+
+  // Desired theta values
+  double left_desired_theta_;
+  double right_desired_theta_;
 
   // Parameters
   std::string imu_topic_;
