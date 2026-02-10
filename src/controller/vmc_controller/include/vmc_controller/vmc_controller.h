@@ -91,6 +91,12 @@ protected:
   double right_front_joint_offset_;
   double right_rear_joint_offset_;
 
+  // Joint angle inversion signs (used to match VMC coordinate system)
+  double left_front_joint_invert_sign_;
+  double left_rear_joint_invert_sign_;
+  double right_front_joint_invert_sign_;
+  double right_rear_joint_invert_sign_;
+
   // Subscriptions (for IMU and force commands)
   rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr imu_subscription_;
   rclcpp::Subscription<std_msgs::msg::Float64MultiArray>::SharedPtr force_command_subscription_;

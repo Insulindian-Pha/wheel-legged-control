@@ -38,7 +38,7 @@
 
   <worldbody>
     <!-- <body name="base" pos="0 0 0.5" quat="0.9659258262890683 0 0.25881904510252076 0"> -->
-    <body name="base" pos="0 0 0.5" >
+    <body name="base_link" pos="0 0 0.5" >
     <!-- 注释掉base_free joint，使机器人固定在空中（类似COD-2026RoboMaster-Balance） -->
     <!-- <joint name="base_free" type="free"/> -->
       <site name="imu" type="box" size="0.002 0.002 0.002"  rgba="1 1 0 1"/>
@@ -46,47 +46,48 @@
         class="touch" mass="8.4"/>
       
 
-      <!-- 右腿臂（蓝色系） -->
-      <body name="AG" pos="-0.01375 -0.1995 0.134" quat="0.707105 0.707108 0 0">
-        <joint name="jAG" pos="0 0 0" axis="0 0 1" range="-1.57 0.3"/>
-        <site name="AG-D" pos="-0.027 -0.094 0" size="0.002" rgba="0 1 0 1"/> 
+      <!-- 右后腿（蓝色系） -->
+      <body name="Right_rear_link" pos="-0.01375 -0.1995 0.134" quat="0.707105 0.707108 0 0">
+        <joint name="jAG" pos="0 0 0" axis="0 0 1" damping="0.1"/>
+        <site name="Right_rear_link-D" pos="-0.027 -0.094 0" size="0.002" rgba="0 1 0 1"/> 
         <geom type="mesh" material="arm_blue" mesh="AG"
           class="untouch" mass="0.667"/>
 
-        <body name="GH" pos="-0.060152 -0.20641 0.0345">
-          <joint name="jGH" pos="0 0 0" axis="0 0 1" range="-0.85 1"/>
-          <site name="GH-F" pos="-0.0604 0.0259 -0.03" size="0.01" rgba="0 1 0 1"/> 
-          <site name="GH-little_wheel" pos="-0.033 -0.062 -0.01" size="0.01" rgba="0 1 0 1"/> 
+        <body name="Right_rear_child1_link" pos="-0.060152 -0.20641 0.0345">
+          <joint name="jGH" pos="0 0 0" axis="0 0 1" range="-0.85 1" damping="0.05"/>
+          <site name="Right_rear_child1_link-F" pos="-0.0604 0.0259 -0.03" size="0.01" rgba="0 1 0 1"/> 
+          <site name="Right_rear_child1_link-little_wheel" pos="-0.033 -0.062 -0.01" size="0.01" rgba="0 1 0 1"/> 
           <geom type="mesh" material="joint_mat" mesh="GH"
             class="touch" mass="1.64"/>
 
-          <body name="wheel_right" pos="0.25495 -0.039583 0.0155">
-            <joint name="jwheel_right" pos="0 0 0" axis="0 0 -1"/>
+          <body name="Right_Wheel_link" pos="0.25495 -0.039583 0.0155">
+            <joint name="jwheel_right" pos="0 0 0" axis="0 0 -1" damping="0.01"/>
             <geom type="mesh" material="arm_blue" mesh="wheel_right"
             class="touch" mass="0.322"/>
           </body>
         </body>
       </body>
 
-      <body name="AB" pos="-0.01375 -0.2155 0.134" quat="0.707105 0.707108 0 0">
-        <joint name="jAB" pos="0 0 0" axis="0 0 1" range="-1.57 0.5"/>
+      <!-- 右前腿（蓝色系） -->
+      <body name="Right_front_link" pos="-0.01375 -0.2155 0.134" quat="0.707105 0.707108 0 0">
+        <joint name="jAB" pos="0 0 0" axis="0 0 1" range="-1.57 0.5" damping="0.1"/>
         <geom type="mesh" material="joint_mat" mesh="AB"
         class="untouch" mass="0.202"/>
 
-        <body name="BE" pos="0.097866 0.0051238 -0.013">
-          <joint name="jBE" pos="0 0 0" axis="0 0 1"/>
+        <body name="Right_front_child1_link" pos="0.097866 0.0051238 -0.013">
+          <joint name="jBE" pos="0 0 0" axis="0 0 1" damping="0.02"/>
           <geom type="mesh" material="arm_blue" mesh="BE"
           class="touch" mass="0.057"/>
 
-          <body name="EC" pos="-0.0090761 -0.11725 0.0094">
-            <joint name="jEC" pos="0 0 0" axis="0 0 -1"/>
-            <site name="EC-D" pos="-0.115974 0.017382 -0.01" size="0.002" rgba="1 0 0 1"/> 
+          <body name="Right_front_child2_link" pos="-0.0090761 -0.11725 0.0094">
+            <joint name="jEC" pos="0 0 0" axis="0 0 -1" damping="0.02"/>
+            <site name="Right_front_child2_link-D" pos="-0.115974 0.017382 -0.01" size="0.002" rgba="1 0 0 1"/> 
             <geom type="mesh" material="joint_mat" mesh="EC"
             class="touch" mass="0.128"/>
 
-            <body name="CF" pos="-0.17658 0.044698 -0.0124">
-              <joint name="jCF" pos="0 0 0" axis="0 0 -1"/>
-              <site name="CF-F" pos="-0.0332 -0.111 0" size="0.002" rgba="1 0 0 1"/> 
+            <body name="Right_front_child3_link" pos="-0.17658 0.044698 -0.0124">
+              <joint name="jCF" pos="0 0 0" axis="0 0 -1" damping="0.02"/>
+              <site name="Right_front_child3_link-F" pos="-0.0332 -0.111 0" size="0.002" rgba="1 0 0 1"/> 
               <geom type="mesh" material="arm_blue" mesh="CF"
               class="touch" mass="0.057"/>
             </body>
@@ -94,26 +95,26 @@
         </body>
       </body>
       
-      <!-- 左腿（红色系） -->
-      <body name="IJ" pos="-0.01375 0.2165 0.134" quat="0.707105 0.707108 0 0">
-        <joint name="jIJ" pos="0 0 0" axis="0 0 -1" range="-0.5 1.57"/>
+      <!-- 左前腿（红色系） -->
+      <body name="Left_front_link" pos="-0.01375 0.2165 0.134" quat="0.707105 0.707108 0 0">
+        <joint name="jIJ" pos="0 0 0" axis="0 0 -1" range="-0.5 1.57" damping="0.1"/>
         <geom type="mesh" material="joint_mat" mesh="IJ"
         class="untouch" mass="0.202"/>
 
-        <body name="JM" pos="0.097866 0.0051238 0.013">
-          <joint name="jJM" pos="0 0 0" axis="0 0 -1"/>
+        <body name="Left_front_child1_link" pos="0.097866 0.0051238 0.013">
+          <joint name="jJM" pos="0 0 0" axis="0 0 -1" damping="0.02"/>
           <geom type="mesh" material="arm_red" mesh="JM"
           class="touch" mass="0.057"/>
 
-          <body name="MK" pos="-0.0090761 -0.11725 -0.0094">
-            <joint name="jMK" pos="0 0 0" axis="0 0 -1"/>
-            <site name="MK-L" pos="-0.115974 0.017382 0.01" size="0.01" rgba="1 0 0 1"/> 
+          <body name="Left_front_child2_link" pos="-0.0090761 -0.11725 -0.0094">
+            <joint name="jMK" pos="0 0 0" axis="0 0 -1" damping="0.02"/>
+            <site name="Left_front_child2_link-L" pos="-0.115974 0.017382 0.01" size="0.01" rgba="1 0 0 1"/> 
             <geom type="mesh" material="joint_mat" mesh="MK"
             class="touch" mass="0.128"/>
 
-            <body name="KN" pos="-0.17658 0.044698 0.0124">
-              <joint name="jKN" pos="0 0 0" axis="0 0 1"/>
-              <site name="KN-N" pos="-0.0332 -0.111 0" size="0.01" rgba="1 0 0 1"/> 
+            <body name="Left_front_child3_link" pos="-0.17658 0.044698 0.0124">
+              <joint name="jKN" pos="0 0 0" axis="0 0 1" damping="0.02"/>
+              <site name="Left_front_child3_link-N" pos="-0.0332 -0.111 0" size="0.01" rgba="1 0 0 1"/> 
               <geom type="mesh" material="arm_red" mesh="KN"
               class="touch" mass="0.057"/>
             </body>
@@ -121,20 +122,21 @@
         </body>
       </body>
 
-      <body name="IO" pos="-0.01375 0.2005 0.134" quat="0.707105 0.707108 0 0">
-        <joint name="jIO" pos="0 0 0" axis="0 0 -1" range="-0.3 1.57"/>
-        <site name="IO-L" pos="-0.027 -0.094 0" size="0.01" rgba="0 1 0 1"/> 
+      <!-- 左后腿（红色系） -->
+      <body name="Left_rear_link" pos="-0.01375 0.2005 0.134" quat="0.707105 0.707108 0 0">
+        <joint name="jIO" pos="0 0 0" axis="0 0 -1" range="-0.3 1.57" damping="0.1"/>
+        <site name="Left_rear_link-L" pos="-0.027 -0.094 0" size="0.01" rgba="0 1 0 1"/> 
         <geom type="mesh" material="arm_red" mesh="IO"
         class="untouch" mass="0.667"/>
 
-        <body name="OP" pos="-0.060152 -0.20641 -0.0345">
-          <joint name="jOP" pos="0 0 0" axis="0 0 -1" range="-1 0.85"/>
-          <site name="OP-N" pos="-0.0604 0.0259 0.03" size="0.01" rgba="0 1 0 1"/> 
+        <body name="Left_rear_child1_link" pos="-0.060152 -0.20641 -0.0345">
+          <joint name="jOP" pos="0 0 0" axis="0 0 -1" range="-1 0.85" damping="0.05"/>
+          <site name="Left_rear_child1_link-N" pos="-0.0604 0.0259 0.03" size="0.01" rgba="0 1 0 1"/> 
           <geom type="mesh" material="joint_mat" mesh="OP"
           class="touch" mass="1.64"/>
 
-          <body name="wheel_left" pos="0.25495 -0.039576 -0.0155">
-            <joint name="jwheel_left" pos="0 0 0" axis="0 0 1"/>
+          <body name="Left_Wheel_link" pos="0.25495 -0.039576 -0.0155">
+            <joint name="jwheel_left" pos="0 0 0" axis="0 0 1" damping="0.01"/>
             <geom type="mesh" material="arm_red" mesh="wheel_left"
             class="touch" mass="0.322"/>
           </body>
@@ -144,10 +146,10 @@
   </worldbody>
 
   <equality>
-    <connect name="right_D" site1="EC-D" site2="AG-D" solref="0.001 1" solimp="0.99 0.99 0.01 0.5 2"/>
-    <connect name="right_F" site1="CF-F" site2="GH-F" solref="0.001 1" solimp="0.99 0.99 0.01 0.5 2"/>
-    <connect name="left_L" site1="IO-L" site2="MK-L" solref="0.001 1" solimp="0.99 0.99 0.01 0.5 2"/>
-    <connect name="left_F" site1="OP-N" site2="KN-N" solref="0.001 1" solimp="0.99 0.99 0.01 0.5 2"/>
+    <connect name="right_D" site1="Right_front_child2_link-D" site2="Right_rear_link-D" solref="0.001 1" solimp="0.99 0.99 0.01 0.5 2"/>
+    <connect name="right_F" site1="Right_front_child3_link-F" site2="Right_rear_child1_link-F" solref="0.001 1" solimp="0.99 0.99 0.01 0.5 2"/>
+    <connect name="left_L" site1="Left_rear_link-L" site2="Left_front_child2_link-L" solref="0.001 1" solimp="0.99 0.99 0.01 0.5 2"/>
+    <connect name="left_F" site1="Left_rear_child1_link-N" site2="Left_front_child3_link-N" solref="0.001 1" solimp="0.99 0.99 0.01 0.5 2"/>
   </equality>
 
   <actuator>
@@ -177,6 +179,10 @@
       <jointpos joint="jIJ" name="Left_front_joint_pos"/>
       <jointpos joint="jIO" name="Left_rear_joint_pos"/>
     </sensor>
+
+  <keyframe>
+    <key name="home" qpos="0 0 0 0 0 0 0 0 0 0 0 0 0 0" />
+  </keyframe>
 
 </mujoco>
 

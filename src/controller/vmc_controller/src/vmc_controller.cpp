@@ -7,7 +7,6 @@
 #include <algorithm>
 #include <cmath>
 #include <iomanip>
-#include <limits>
 
 namespace vmc_controller
 {
@@ -25,6 +24,10 @@ VMCController::VMCController()
   , left_rear_joint_offset_(0.0)
   , right_front_joint_offset_(0.0)
   , right_rear_joint_offset_(0.0)
+  , left_front_joint_invert_sign_(1.0)
+  , left_rear_joint_invert_sign_(1.0)
+  , right_front_joint_invert_sign_(1.0)
+  , right_rear_joint_invert_sign_(1.0)
 {
 }
 
@@ -59,6 +62,12 @@ controller_interface::CallbackReturn VMCController::on_init()
     auto_declare<double>("left_rear_joint_offset", 0.0);
     auto_declare<double>("right_front_joint_offset", 0.0);
     auto_declare<double>("right_rear_joint_offset", 0.0);
+
+    // 关节角度取反配置（用于匹配VMC坐标系）
+    auto_declare<double>("left_front_joint_invert_sign", 1.0);
+    auto_declare<double>("left_rear_joint_invert_sign", 1.0);
+    auto_declare<double>("right_front_joint_invert_sign", 1.0);
+    auto_declare<double>("right_rear_joint_invert_sign", 1.0);
   }
   catch (const std::exception& e)
   {
@@ -97,6 +106,12 @@ controller_interface::CallbackReturn VMCController::on_configure(const rclcpp_li
   right_front_joint_offset_ = get_node()->get_parameter("right_front_joint_offset").as_double();
   right_rear_joint_offset_ = get_node()->get_parameter("right_rear_joint_offset").as_double();
 
+  // 读取关节角度取反配置
+  left_front_joint_invert_sign_ = get_node()->get_parameter("left_front_joint_invert_sign").as_double();
+  left_rear_joint_invert_sign_ = get_node()->get_parameter("left_rear_joint_invert_sign").as_double();
+  right_front_joint_invert_sign_ = get_node()->get_parameter("right_front_joint_invert_sign").as_double();
+  right_rear_joint_invert_sign_ = get_node()->get_parameter("right_rear_joint_invert_sign").as_double();
+
   // Initialize VMC leg structures
   left_leg_.init_leg_length(l1_, l2_, l3_, l4_, l5_);
   right_leg_.init_leg_length(l1_, l2_, l3_, l4_, l5_);
@@ -116,6 +131,9 @@ controller_interface::CallbackReturn VMCController::on_configure(const rclcpp_li
               l4_, l5_);
   RCLCPP_INFO(get_node()->get_logger(), "Joint offsets: LF=%.3f, LR=%.3f, RF=%.3f, RR=%.3f (rad)",
               left_front_joint_offset_, left_rear_joint_offset_, right_front_joint_offset_, right_rear_joint_offset_);
+  RCLCPP_INFO(get_node()->get_logger(), "Joint invert signs: LF=%.1f, LR=%.1f, RF=%.1f, RR=%.1f",
+              left_front_joint_invert_sign_, left_rear_joint_invert_sign_, right_front_joint_invert_sign_,
+              right_rear_joint_invert_sign_);
 
   return controller_interface::CallbackReturn::SUCCESS;
 }
@@ -270,19 +288,21 @@ controller_interface::return_type VMCController::update(const rclcpp::Time& time
   double right_rear_pos_raw = right_rear_joint_state_[0].get().get_value();
 
   // Apply offset to set initial angles as zero point
-  double left_front_pos = left_front_pos_raw + left_front_joint_offset_;
-  double left_rear_pos = left_rear_pos_raw + left_rear_joint_offset_;
-  double right_front_pos = right_front_pos_raw + right_front_joint_offset_;
-  double right_rear_pos = right_rear_pos_raw + right_rear_joint_offset_;
+  double left_front_pos = left_front_joint_invert_sign_ * (left_front_pos_raw + left_front_joint_offset_);
+  double left_rear_pos = left_rear_joint_invert_sign_ * (left_rear_pos_raw + left_rear_joint_offset_);
+  double right_front_pos = right_front_joint_invert_sign_ * (right_front_pos_raw + right_front_joint_offset_);
+  double right_rear_pos = right_rear_joint_invert_sign_ * (right_rear_pos_raw + right_rear_joint_offset_);
 
   // Update joint angles for VMC calculation
-  // 注意：phi1需要加π，但phi4不需要加π（与Simulation.py保持一致）
-  // Simulation.py中：右腿使用jAB(phi1)和jAG(phi4)，左腿使用jIO(phi1)和jIJ(phi4)
-  // 统一顺序：左腿使用左腿关节(jIJ, jIO)，右腿使用右腿关节(jAB, jAG)
-  left_leg_.setPhi1(M_PI + left_rear_pos);     // jIO -> phi1 (左后关节)
-  left_leg_.setPhi4(left_front_pos);           // jIJ -> phi4 (左前关节，不加π)
-  right_leg_.setPhi1(M_PI + right_front_pos);  // jAB -> phi1 (右前关节)
-  right_leg_.setPhi4(right_rear_pos);          // jAG -> phi4 (右后关节，不加π)
+  double left_phi1 = M_PI + left_rear_pos;     // phi1 (左后关节)
+  double left_phi4 = left_front_pos;           // phi4 (左前关节，不加π)
+  double right_phi1 = M_PI + right_front_pos;  // phi1 (右前关节)
+  double right_phi4 = right_rear_pos;          // phi4 (右后关节，不加π)
+
+  left_leg_.setPhi1(left_phi1);
+  left_leg_.setPhi4(left_phi4);
+  right_leg_.setPhi1(right_phi1);
+  right_leg_.setPhi4(right_phi4);
 
   // Set F0 and Tp
   left_leg_.setF0(left_F0_);
@@ -297,8 +317,6 @@ controller_interface::return_type VMCController::update(const rclcpp::Time& time
   // Calculate VMC for right leg
   right_leg_.calc1Right(pitch_, pitch_gyro_, dt);
   right_leg_.calc2();
-
-  right_leg_.getL0();
 
   // Debug output (only print occasionally to avoid spam)
   static int debug_counter = 0;
@@ -316,6 +334,7 @@ controller_interface::return_type VMCController::update(const rclcpp::Time& time
               << ", RF=" << std::setw(7) << right_front_pos << ", RR=" << std::setw(7) << right_rear_pos << std::endl;
     std::cout << "Leg lengths:       LL0=" << std::setw(7) << left_leg_.getL0() << ", RL0=" << std::setw(7)
               << right_leg_.getL0() << std::endl;
+
     std::cout << "=====================" << std::endl;
   }
 

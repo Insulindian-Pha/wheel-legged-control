@@ -22,7 +22,10 @@
     <mesh name="Right_Wheel_link" content_type="model/stl" file="Right_Wheel_link.STL" />
   </asset>
   <worldbody>
-    <geom type="mesh" rgba="1 1 1 1" mesh="base_link" />
+    <body name="base">
+      <site name="imu" type="box" size="0.002 0.002 0.002" rgba="1 1 0 1"/>
+      <geom type="mesh" rgba="1 1 1 1" mesh="base_link" />
+    </body>
     
     <body name="Left_front_link" pos="-0.0193914 -0.1837 -0.05">
       <inertial pos="0.032009 -0.002932 -0.003563" quat="0.472786 0.528055 0.525808 0.470275" mass="0.7" diaginertia="0.000152893 0.000125485 2.9469e-05" />
@@ -138,6 +141,16 @@
     <general name="Right_rear_joint_actuator" joint="Right_rear_joint" gainprm="1" ctrlrange="-3.14 3.14" />
     <general name="Right_Wheel_joint_actuator" joint="Right_Wheel_joint" gainprm="1" ctrlrange="-3.14 3.14" />
   </actuator>
+
+  <sensor>
+    <!-- IMU传感器 -->
+    <!-- 四元数，wxyz -->
+    <framequat name="imu_quat" objtype="site" objname="imu" />
+    <!-- 陀螺仪，gx，gy，gz，方向以绕坐标轴右手定则为正向 -->
+    <gyro name="imu_gyro" site="imu" />
+    <!-- 加速度计 -->
+    <accelerometer name="imu_accel" site="imu" />
+  </sensor>
   <keyframe>
     <key name="home" qpos="0 0 0 0 0 0 0 0 0 0 0 0 0 0" />
   </keyframe>

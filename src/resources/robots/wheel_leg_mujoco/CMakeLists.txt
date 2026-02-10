@@ -25,19 +25,20 @@ install(DIRECTORY MJCF
 
 # Install Python files (Simulation.py, VMC.py, etc.)
 install(PROGRAMS
-  Simulation.py
-  VMC.py
-  environment.py
-  keyboard.py
-  caculation.py
-  Controller.py
   DESTINATION share/${PROJECT_NAME}/
 )
 
-# Install scripts directory
+# Install scripts directory (for non-executable files)
 install(DIRECTORY scripts
   DESTINATION share/${PROJECT_NAME}/
   USE_SOURCE_PERMISSIONS
+  FILES_MATCHING
+  PATTERN "*.md"
+)
+
+# Install Python scripts as executables
+install(PROGRAMS
+  DESTINATION lib/${PROJECT_NAME}
 )
 
 ament_package()

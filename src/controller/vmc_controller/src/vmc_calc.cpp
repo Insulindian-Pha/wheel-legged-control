@@ -70,8 +70,6 @@ void VMCLeg::calc1Right(double pitch, double pitch_gyro, double dt)
 
   dd_theta = (d_theta_ - last_d_theta) / dt;
   last_d_theta = d_theta_;
-
-  
 }
 
 void VMCLeg::calc1Left(double pitch, double pitch_gyro, double dt)

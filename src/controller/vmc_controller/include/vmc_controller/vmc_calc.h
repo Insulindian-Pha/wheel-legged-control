@@ -21,9 +21,6 @@ public:
   void init_leg_length(double l1, double l2, double l3, double l4, double l5);
 
   // 计算theta和d_theta给lqr用，同时也计算腿长L0
-  // pitch: 俯仰角（弧度）
-  // pitch_gyro: 俯仰角速度（弧度/秒）
-  // dt: 时间步长（秒）
   void calc1Right(double pitch, double pitch_gyro, double dt);
   void calc1Left(double pitch, double pitch_gyro, double dt);
 
