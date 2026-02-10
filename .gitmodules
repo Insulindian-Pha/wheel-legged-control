@@ -1,0 +1,6 @@
+[submodule "src/hardware/mujoco_ros2_control"]
+	path = src/hardware/mujoco_ros2_control
+	url = https://github.com/ros-controls/mujoco_ros2_control.git
+[submodule "src/hardware/ros2_control_cmake"]
+	path = src/hardware/ros2_control_cmake
+	url = https://github.com/ros-controls/ros2_control_cmake.git
