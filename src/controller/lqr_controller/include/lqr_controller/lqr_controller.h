@@ -77,20 +77,28 @@ protected:
   double right_F0_;
   bool received_vmc_state_;
 
-  // LQR gain matrices (12 values for each leg)
-  std::array<double, 12> left_lqr_gains_;
-  std::array<double, 12> right_lqr_gains_;
+  // LQR gain matrices (10 values for each output: 4 outputs total)
+  // Left wheel torque gains (10 values)
+  std::array<double, 10> left_wheel_lqr_gains_;
+  // Right wheel torque gains (10 values)
+  std::array<double, 10> right_wheel_lqr_gains_;
+  // Left leg torque gains (10 values)
+  std::array<double, 10> left_leg_lqr_gains_;
+  // Right leg torque gains (10 values)
+  std::array<double, 10> right_leg_lqr_gains_;
 
-  // LQR gain polarity (12 values for each leg)
+  // State variable polarity (10 values, one for each state)
   // 1.0: keep original polarity, -1.0: invert
-  std::array<double, 12> left_lqr_gain_polarity_;
-  std::array<double, 12> right_lqr_gain_polarity_;
+  // Applied to state values before multiplying with gains
+  std::array<double, 10> state_polarity_;
 
   // State estimation (simple integration from wheel velocity)
-  double x_position_;  // Current position (m)
-  double x_velocity_;  // Current velocity (m/s)
+  double x_position_;  // Current position (m) - corresponds to 's' in LQR
+  double x_velocity_;  // Current velocity (m/s) - corresponds to 'dot_s' in LQR
   double x_set_;       // Desired position (m)
   double v_set_;       // Desired velocity (m/s)
+  double yaw_;         // Yaw angle (rad) - corresponds to 'fai' in LQR
+  double yaw_rate_;    // Yaw rate (rad/s) - corresponds to 'dot_fai' in LQR
 
   // Parameters
   double wheel_radius_;      // Wheel radius for velocity calculation (m)
@@ -104,6 +112,9 @@ protected:
   void update_state_estimation(double dt);
   void publish_force_command(double left_F0, double left_Tp, double right_F0, double right_Tp);
   void publish_lqr_state(double wheel_torque_left, double wheel_torque_right, double tp_left, double tp_right);
+
+  // Utility function to normalize angle to [-π, π]
+  static double normalize_angle(double angle);
 };
 
 }  // namespace lqr_controller

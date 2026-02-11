@@ -28,7 +28,7 @@
   </asset>
   <worldbody>
     <body name="base" pos="0 0 0.3">
-      <freejoint name="base_free_joint"/>
+      <joint name="base_pitch_joint" type="hinge" axis="0 1 0" damping="0.1"/>
       <site name="imu" type="box" size="0.002 0.002 0.002" rgba="1 1 0 1"/>
       <geom type="mesh" rgba="1 1 1 1" mesh="base_link" class="untouch" mass="8.4"/>
     

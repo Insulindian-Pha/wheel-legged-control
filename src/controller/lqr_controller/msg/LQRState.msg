@@ -15,8 +15,10 @@ float64 pitch                # 俯仰角 (rad)
 float64 pitch_gyro           # 俯仰角速度 (rad/s)
 
 # 状态估计值
-float64 x_position           # 当前位置 (m)
-float64 x_velocity           # 当前速度 (m/s)
+float64 x_position           # 当前位置 (m) - s
+float64 x_velocity           # 当前速度 (m/s) - dot_s
+float64 yaw                  # 航向角 (rad) - fai
+float64 yaw_rate             # 航向角速度 (rad/s) - dot_fai
 float64 x_set                # 期望位置 (m)
 float64 v_set                # 期望速度 (m/s)
 float64 x_err                # 位置误差 (m)

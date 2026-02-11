@@ -24,15 +24,18 @@ LQRController::LQRController()
   , x_velocity_(0.0)
   , x_set_(0.0)
   , v_set_(0.0)
+  , yaw_(0.0)
+  , yaw_rate_(0.0)
   , wheel_radius_(0.06)
   , max_wheel_torque_(4.0)
 {
   // Initialize LQR gains to zero
-  left_lqr_gains_.fill(0.0);
-  right_lqr_gains_.fill(0.0);
-  // Initialize gain polarity to 1.0 (no inversion by default)
-  left_lqr_gain_polarity_.fill(1.0);
-  right_lqr_gain_polarity_.fill(1.0);
+  left_wheel_lqr_gains_.fill(0.0);
+  right_wheel_lqr_gains_.fill(0.0);
+  left_leg_lqr_gains_.fill(0.0);
+  right_leg_lqr_gains_.fill(0.0);
+  // Initialize state polarity to 1.0 (no inversion by default)
+  state_polarity_.fill(1.0);
 }
 
 controller_interface::CallbackReturn LQRController::on_init()
@@ -50,28 +53,36 @@ controller_interface::CallbackReturn LQRController::on_init()
     auto_declare<double>("x_set", 0.0);
     auto_declare<double>("v_set", 0.0);
 
-    // Declare LQR gains for left leg (12 values)
-    for (int i = 0; i < 12; ++i)
+    // Declare LQR gains for left wheel torque (10 values)
+    for (int i = 0; i < 10; ++i)
     {
-      auto_declare<double>("left_lqr_gains." + std::to_string(i), 0.0);
+      auto_declare<double>("left_wheel_lqr_gains." + std::to_string(i), 0.0);
     }
 
-    // Declare LQR gains for right leg (12 values)
-    for (int i = 0; i < 12; ++i)
+    // Declare LQR gains for right wheel torque (10 values)
+    for (int i = 0; i < 10; ++i)
     {
-      auto_declare<double>("right_lqr_gains." + std::to_string(i), 0.0);
+      auto_declare<double>("right_wheel_lqr_gains." + std::to_string(i), 0.0);
     }
 
-    // Declare LQR gain polarity for left leg (12 values)
-    for (int i = 0; i < 12; ++i)
+    // Declare LQR gains for left leg torque (10 values)
+    for (int i = 0; i < 10; ++i)
     {
-      auto_declare<double>("left_lqr_gain_polarity." + std::to_string(i), 1.0);
+      auto_declare<double>("left_leg_lqr_gains." + std::to_string(i), 0.0);
     }
 
-    // Declare LQR gain polarity for right leg (12 values)
-    for (int i = 0; i < 12; ++i)
+    // Declare LQR gains for right leg torque (10 values)
+    for (int i = 0; i < 10; ++i)
     {
-      auto_declare<double>("right_lqr_gain_polarity." + std::to_string(i), 1.0);
+      auto_declare<double>("right_leg_lqr_gains." + std::to_string(i), 0.0);
+    }
+
+    // Declare state polarity (10 values, one for each state)
+    // 0: s, 1: dot_s, 2: fai, 3: dot_fai, 4: theta_ll, 5: dot_theta_ll,
+    // 6: theta_lr, 7: dot_theta_lr, 8: theta_b, 9: dot_theta_b
+    for (int i = 0; i < 10; ++i)
+    {
+      auto_declare<double>("state_polarity." + std::to_string(i), 1.0);
     }
   }
   catch (const std::exception& e)
@@ -96,28 +107,36 @@ controller_interface::CallbackReturn LQRController::on_configure(const rclcpp_li
   x_set_ = get_node()->get_parameter("x_set").as_double();
   v_set_ = get_node()->get_parameter("v_set").as_double();
 
-  // Get LQR gains for left leg
-  for (int i = 0; i < 12; ++i)
+  // Get LQR gains for left wheel torque
+  for (int i = 0; i < 10; ++i)
   {
-    left_lqr_gains_[i] = get_node()->get_parameter("left_lqr_gains." + std::to_string(i)).as_double();
+    left_wheel_lqr_gains_[i] = get_node()->get_parameter("left_wheel_lqr_gains." + std::to_string(i)).as_double();
   }
 
-  // Get LQR gains for right leg
-  for (int i = 0; i < 12; ++i)
+  // Get LQR gains for right wheel torque
+  for (int i = 0; i < 10; ++i)
   {
-    right_lqr_gains_[i] = get_node()->get_parameter("right_lqr_gains." + std::to_string(i)).as_double();
+    right_wheel_lqr_gains_[i] = get_node()->get_parameter("right_wheel_lqr_gains." + std::to_string(i)).as_double();
   }
 
-  // Get LQR gain polarity for left leg
-  for (int i = 0; i < 12; ++i)
+  // Get LQR gains for left leg torque
+  for (int i = 0; i < 10; ++i)
   {
-    left_lqr_gain_polarity_[i] = get_node()->get_parameter("left_lqr_gain_polarity." + std::to_string(i)).as_double();
+    left_leg_lqr_gains_[i] = get_node()->get_parameter("left_leg_lqr_gains." + std::to_string(i)).as_double();
   }
 
-  // Get LQR gain polarity for right leg
-  for (int i = 0; i < 12; ++i)
+  // Get LQR gains for right leg torque
+  for (int i = 0; i < 10; ++i)
   {
-    right_lqr_gain_polarity_[i] = get_node()->get_parameter("right_lqr_gain_polarity." + std::to_string(i)).as_double();
+    right_leg_lqr_gains_[i] = get_node()->get_parameter("right_leg_lqr_gains." + std::to_string(i)).as_double();
+  }
+
+  // Get state polarity (10 values, one for each state)
+  // 0: s, 1: dot_s, 2: fai, 3: dot_fai, 4: theta_ll, 5: dot_theta_ll,
+  // 6: theta_lr, 7: dot_theta_lr, 8: theta_b, 9: dot_theta_b
+  for (int i = 0; i < 10; ++i)
+  {
+    state_polarity_[i] = get_node()->get_parameter("state_polarity." + std::to_string(i)).as_double();
   }
 
   // Create subscription for VMC state
@@ -205,6 +224,8 @@ controller_interface::CallbackReturn LQRController::on_activate(const rclcpp_lif
   // Reset state estimation
   x_position_ = 0.0;
   x_velocity_ = 0.0;
+  yaw_ = 0.0;
+  yaw_rate_ = 0.0;
 
   RCLCPP_INFO(get_node()->get_logger(), "LQR Controller activated");
   return controller_interface::CallbackReturn::SUCCESS;
@@ -294,49 +315,57 @@ void LQRController::vmc_state_callback(const vmc_controller::msg::VMCState::Shar
 void LQRController::calculate_lqr_control(double& wheel_torque_left, double& wheel_torque_right, double& tp_left,
                                           double& tp_right)
 {
-  // Calculate state errors
-  double x_err = x_set_ - x_position_;
-  double v_err = v_set_ - x_velocity_;
+  // State vector (10 states):
+  // 0: s (位移) - x_position_
+  // 1: dot_s (速度) - x_velocity_
+  // 2: fai (航向角) - yaw_
+  // 3: dot_fai (航向角速度) - yaw_rate_
+  // 4: theta_ll (左腿角度) - left_theta_
+  // 5: dot_theta_ll (左腿角速度) - left_d_theta_
+  // 6: theta_lr (右腿角度) - right_theta_
+  // 7: dot_theta_lr (右腿角速度) - right_d_theta_
+  // 8: theta_b (身体角度) - pitch_
+  // 9: dot_theta_b (身体角速度) - pitch_gyro_
 
-  // Left leg LQR control
-  // Wheel torque: K[0-5] * [theta, d_theta, x_err, v_err, pitch, pitch_gyro]
-  // Apply gain polarity
-  wheel_torque_left = left_lqr_gain_polarity_[0] * left_lqr_gains_[0] * (left_theta_ - 0.0) +
-                      left_lqr_gain_polarity_[1] * left_lqr_gains_[1] * (left_d_theta_ - 0.0) +
-                      left_lqr_gain_polarity_[2] * left_lqr_gains_[2] * x_err +
-                      left_lqr_gain_polarity_[3] * left_lqr_gains_[3] * v_err +
-                      left_lqr_gain_polarity_[4] * left_lqr_gains_[4] * (pitch_ - 0.0) +
-                      left_lqr_gain_polarity_[5] * left_lqr_gains_[5] * (pitch_gyro_ - 0.0);
+  // Apply state polarity to each state value
+  double s = state_polarity_[0] * x_position_;
+  double dot_s = state_polarity_[1] * x_velocity_;
+  double fai = state_polarity_[2] * yaw_;
+  double dot_fai = state_polarity_[3] * yaw_rate_;
+  double theta_ll = state_polarity_[4] * left_theta_;
+  double dot_theta_ll = state_polarity_[5] * left_d_theta_;
+  double theta_lr = state_polarity_[6] * right_theta_;
+  double dot_theta_lr = state_polarity_[7] * right_d_theta_;
+  double theta_b = state_polarity_[8] * pitch_;
+  double dot_theta_b = state_polarity_[9] * pitch_gyro_;
 
-  // Left leg Tp: K[6-11] * [theta, d_theta, x_err, v_err, pitch, pitch_gyro]
-  // Apply gain polarity
-  tp_left = left_lqr_gain_polarity_[6] * left_lqr_gains_[6] * (left_theta_ - 0.0) +
-            left_lqr_gain_polarity_[7] * left_lqr_gains_[7] * (left_d_theta_ - 0.0) +
-            left_lqr_gain_polarity_[8] * left_lqr_gains_[8] * x_err +
-            left_lqr_gain_polarity_[9] * left_lqr_gains_[9] * v_err +
-            left_lqr_gain_polarity_[10] * left_lqr_gains_[10] * (pitch_ - 0.0) +
-            left_lqr_gain_polarity_[11] * left_lqr_gains_[11] * (pitch_gyro_ - 0.0);
+  // Left wheel torque = K[0:9] * state (with polarity applied)
+  wheel_torque_left = left_wheel_lqr_gains_[0] * s + left_wheel_lqr_gains_[1] * dot_s + left_wheel_lqr_gains_[2] * fai +
+                      left_wheel_lqr_gains_[3] * dot_fai + left_wheel_lqr_gains_[4] * theta_ll +
+                      left_wheel_lqr_gains_[5] * dot_theta_ll + left_wheel_lqr_gains_[6] * theta_lr +
+                      left_wheel_lqr_gains_[7] * dot_theta_lr + left_wheel_lqr_gains_[8] * theta_b +
+                      left_wheel_lqr_gains_[9] * dot_theta_b;
 
-  // Right leg LQR control
-  // Note: For right leg, x_err and v_err signs are inverted (x_filter-x_set instead of x_set-x_filter)
-  double x_err_right = -x_err;  // Inverted for right leg
-  double v_err_right = -v_err;  // Inverted for right leg
-  // Apply gain polarity
-  wheel_torque_right = right_lqr_gain_polarity_[0] * right_lqr_gains_[0] * (right_theta_ - 0.0) +
-                       right_lqr_gain_polarity_[1] * right_lqr_gains_[1] * (right_d_theta_ - 0.0) +
-                       right_lqr_gain_polarity_[2] * right_lqr_gains_[2] * x_err_right +
-                       right_lqr_gain_polarity_[3] * right_lqr_gains_[3] * v_err_right +
-                       right_lqr_gain_polarity_[4] * right_lqr_gains_[4] * (pitch_ - 0.0) +
-                       right_lqr_gain_polarity_[5] * right_lqr_gains_[5] * (pitch_gyro_ - 0.0);
+  // Right wheel torque = K[10:19] * state (with polarity applied)
+  wheel_torque_right = right_wheel_lqr_gains_[0] * s + right_wheel_lqr_gains_[1] * dot_s +
+                       right_wheel_lqr_gains_[2] * fai + right_wheel_lqr_gains_[3] * dot_fai +
+                       right_wheel_lqr_gains_[4] * theta_ll + right_wheel_lqr_gains_[5] * dot_theta_ll +
+                       right_wheel_lqr_gains_[6] * theta_lr + right_wheel_lqr_gains_[7] * dot_theta_lr +
+                       right_wheel_lqr_gains_[8] * theta_b + right_wheel_lqr_gains_[9] * dot_theta_b;
 
-  // Right leg Tp
-  // Apply gain polarity
-  tp_right = right_lqr_gain_polarity_[6] * right_lqr_gains_[6] * (right_theta_ - 0.0) +
-             right_lqr_gain_polarity_[7] * right_lqr_gains_[7] * (right_d_theta_ - 0.0) +
-             right_lqr_gain_polarity_[8] * right_lqr_gains_[8] * x_err_right +
-             right_lqr_gain_polarity_[9] * right_lqr_gains_[9] * v_err_right +
-             right_lqr_gain_polarity_[10] * right_lqr_gains_[10] * (pitch_ - 0.0) +
-             right_lqr_gain_polarity_[11] * right_lqr_gains_[11] * (pitch_gyro_ - 0.0);
+  // Left leg torque (Tp) = K[20:29] * state (with polarity applied)
+  tp_left = left_leg_lqr_gains_[0] * s + left_leg_lqr_gains_[1] * dot_s + left_leg_lqr_gains_[2] * fai +
+            left_leg_lqr_gains_[3] * dot_fai + left_leg_lqr_gains_[4] * theta_ll +
+            left_leg_lqr_gains_[5] * dot_theta_ll + left_leg_lqr_gains_[6] * theta_lr +
+            left_leg_lqr_gains_[7] * dot_theta_lr + left_leg_lqr_gains_[8] * theta_b +
+            left_leg_lqr_gains_[9] * dot_theta_b;
+
+  // Right leg torque (Tp) = K[30:39] * state (with polarity applied)
+  tp_right = right_leg_lqr_gains_[0] * s + right_leg_lqr_gains_[1] * dot_s + right_leg_lqr_gains_[2] * fai +
+             right_leg_lqr_gains_[3] * dot_fai + right_leg_lqr_gains_[4] * theta_ll +
+             right_leg_lqr_gains_[5] * dot_theta_ll + right_leg_lqr_gains_[6] * theta_lr +
+             right_leg_lqr_gains_[7] * dot_theta_lr + right_leg_lqr_gains_[8] * theta_b +
+             right_leg_lqr_gains_[9] * dot_theta_b;
 }
 
 void LQRController::update_state_estimation(double dt)
@@ -345,7 +374,7 @@ void LQRController::update_state_estimation(double dt)
   double left_wheel_vel = left_wheel_state_[0].get().get_value();
   double right_wheel_vel = right_wheel_state_[0].get().get_value();
 
-  // Calculate average velocity from wheel speeds
+  // Calculate average velocity from wheel speeds (for forward motion)
   // Note: Sign convention may need adjustment based on coordinate system
   double avg_wheel_vel = (left_wheel_vel + right_wheel_vel) / 2.0;
 
@@ -354,6 +383,17 @@ void LQRController::update_state_estimation(double dt)
 
   // Integrate position
   x_position_ += x_velocity_ * dt;
+
+  // Calculate yaw rate from differential wheel velocities
+  // TODO: Need wheel base width parameter for accurate calculation
+  // For now, use a simple approximation or set to zero
+  // yaw_rate = (right_wheel_vel - left_wheel_vel) * wheel_radius_ / wheel_base_width
+  double wheel_vel_diff = right_wheel_vel - left_wheel_vel;
+  yaw_rate_ = wheel_vel_diff * wheel_radius_ / 0.3;  // Assuming 0.3m wheel base width
+
+  // Integrate yaw and normalize to [-π, π]
+  yaw_ += yaw_rate_ * dt;
+  yaw_ = normalize_angle(yaw_);
 }
 
 void LQRController::publish_force_command(double left_F0, double left_Tp, double right_F0, double right_Tp)
@@ -397,6 +437,8 @@ void LQRController::publish_lqr_state(double wheel_torque_left, double wheel_tor
     // State estimation
     msg.x_position = x_position_;
     msg.x_velocity = x_velocity_;
+    msg.yaw = yaw_;
+    msg.yaw_rate = yaw_rate_;
     msg.x_set = x_set_;
     msg.v_set = v_set_;
     msg.x_err = x_set_ - x_position_;
@@ -438,6 +480,21 @@ controller_interface::InterfaceConfiguration LQRController::state_interface_conf
   state_interfaces_config.names.push_back(right_wheel_joint_name_ + "/" + hardware_interface::HW_IF_VELOCITY);
 
   return state_interfaces_config;
+}
+
+double LQRController::normalize_angle(double angle)
+{
+  // Normalize angle to [-π, π] range using fmod for efficiency
+  angle = std::fmod(angle, 2.0 * M_PI);
+  if (angle > M_PI)
+  {
+    angle -= 2.0 * M_PI;
+  }
+  else if (angle < -M_PI)
+  {
+    angle += 2.0 * M_PI;
+  }
+  return angle;
 }
 
 }  // namespace lqr_controller

@@ -131,64 +131,85 @@ lqr_controller:
     x_set: 0.0 # 期望位置 (m)
     v_set: 0.0 # 期望速度 (m/s)
 
-    # 左腿LQR增益矩阵 (12个值)
-    # K[0-5]: 轮毂电机力矩增益 [theta, d_theta, x_err, v_err, pitch, pitch_gyro]
-    # K[6-11]: Tp增益 [theta, d_theta, x_err, v_err, pitch, pitch_gyro]
-    left_lqr_gains:
-      0: -2.1954 # theta -> wheel torque
-      1: -0.2044 # d_theta -> wheel torque
-      2: -0.8826 # x_err -> wheel torque
-      3: -1.3245 # v_err -> wheel torque
-      4: 1.2784 # pitch -> wheel torque
-      5: 0.1112 # pitch_gyro -> wheel torque
-      6: 2.5538 # theta -> Tp
-      7: 0.2718 # d_theta -> Tp
-      8: 1.5728 # x_err -> Tp
-      9: 2.2893 # v_err -> Tp
-      10: 12.1973 # pitch -> Tp
-      11: 0.4578 # pitch_gyro -> Tp
-    # 右腿LQR增益矩阵 (12个值)
-    right_lqr_gains:
-      0: -2.1954 # theta -> wheel torque
-      1: -0.2044 # d_theta -> wheel torque
-      2: -0.8826 # x_err -> wheel torque
-      3: -1.3245 # v_err -> wheel torque
-      4: 1.2784 # pitch -> wheel torque
-      5: 0.1112 # pitch_gyro -> wheel torque
-      6: 2.5538 # theta -> Tp
-      7: 0.2718 # d_theta -> Tp
-      8: 1.5728 # x_err -> Tp
-      9: 2.2893 # v_err -> Tp
-      10: 12.1973 # pitch -> Tp
-      11: 0.4578 # pitch_gyro -> Tp
+    # LQR K 矩阵配置 (4x10 = 40个值)
+    # 状态向量 (10个状态):
+    # 0: s (位移)
+    # 1: dot_s (速度)
+    # 2: fai (航向角)
+    # 3: dot_fai (航向角速度)
+    # 4: theta_ll (左腿角度)
+    # 5: dot_theta_ll (左腿角速度)
+    # 6: theta_lr (右腿角度)
+    # 7: dot_theta_lr (右腿角速度)
+    # 8: theta_b (身体角度)
+    # 9: dot_theta_b (身体角速度)
 
-    # 左腿LQR增益极性 (12个值)
+    # LQR K 值 - 左轮力矩 (K[0:9])
+    left_wheel_lqr_gains:
+      0: -2.23606386 # s (位移) -> 左轮力矩
+      1: -3.16823120 # dot_s (速度) -> 左轮力矩
+      2: -0.45910095 # fai (航向角) -> 左轮力矩
+      3: -0.05186450 # dot_fai (航向角速度) -> 左轮力矩
+      4: -10.54371396 # theta_ll (左腿角度) -> 左轮力矩
+      5: -1.44318834 # dot_theta_ll (左腿角速度) -> 左轮力矩
+      6: -1.96696540 # theta_lr (右腿角度) -> 左轮力矩
+      7: -0.35920430 # dot_theta_lr (右腿角速度) -> 左轮力矩
+      8: -0.00959538 # theta_b (身体角度) -> 左轮力矩
+      9: -0.00175215 # dot_theta_b (身体角速度) -> 左轮力矩
+
+    # LQR K 值 - 右轮力矩 (K[10:19])
+    right_wheel_lqr_gains:
+      0: -2.23606386 # s (位移) -> 右轮力矩
+      1: -3.16823120 # dot_s (速度) -> 右轮力矩
+      2: 0.45910095 # fai (航向角) -> 右轮力矩
+      3: 0.05186450 # dot_fai (航向角速度) -> 右轮力矩
+      4: -1.96696540 # theta_ll (左腿角度) -> 右轮力矩
+      5: -0.35920430 # dot_theta_ll (左腿角速度) -> 右轮力矩
+      6: -10.54371396 # theta_lr (右腿角度) -> 右轮力矩
+      7: -1.44318834 # dot_theta_lr (右腿角速度) -> 右轮力矩
+      8: -0.00959538 # theta_b (身体角度) -> 右轮力矩
+      9: -0.00175215 # dot_theta_b (身体角速度) -> 右轮力矩
+
+    # LQR K 值 - 左腿力矩 (K[20:29])
+    left_leg_lqr_gains:
+      0: 0.00429119 # s (位移) -> 左腿力矩
+      1: 0.00590375 # dot_s (速度) -> 左腿力矩
+      2: -4.97887802 # fai (航向角) -> 左腿力矩
+      3: -1.32524364 # dot_fai (航向角速度) -> 左腿力矩
+      4: 2.86411853 # theta_ll (左腿角度) -> 左腿力矩
+      5: 0.11206008 # dot_theta_ll (左腿角速度) -> 左腿力矩
+      6: -2.84467505 # theta_lr (右腿角度) -> 左腿力矩
+      7: -0.10905619 # dot_theta_lr (右腿角速度) -> 左腿力矩
+      8: -4.99999079 # theta_b (身体角度) -> 左腿力矩
+      9: -0.70754852 # dot_theta_b (身体角速度) -> 左腿力矩
+
+    # LQR K 值 - 右腿力矩 (K[30:39])
+    right_leg_lqr_gains:
+      0: 0.00429119 # s (位移) -> 右腿力矩
+      1: 0.00590375 # dot_s (速度) -> 右腿力矩
+      2: 4.97887802 # fai (航向角) -> 右腿力矩
+      3: 1.32524364 # dot_fai (航向角速度) -> 右腿力矩
+      4: -2.84467505 # theta_ll (左腿角度) -> 右腿力矩
+      5: -0.10905619 # dot_theta_ll (左腿角速度) -> 右腿力矩
+      6: 2.86411853 # theta_lr (右腿角度) -> 右腿力矩
+      7: 0.11206008 # dot_theta_lr (右腿角速度) -> 右腿力矩
+      8: -4.99999079 # theta_b (身体角度) -> 右腿力矩
+      9: -0.70754852 # dot_theta_b (身体角速度) -> 右腿力矩
+
+    # 状态变量极性配置 (10个值, 对应10个状态量)
     # 1.0: 保持原极性, -1.0: 取反
-    left_lqr_gain_polarity:
-      0: 1.0 # theta -> wheel torque
-      1: 1.0 # d_theta -> wheel torque
-      2: -1.0 # x_err -> wheel torque
-      3: -1.0 # v_err -> wheel torque
-      4: 1.0 # pitch -> wheel torque
-      5: 1.0 # pitch_gyro -> wheel torque
-      6: 1.0 # theta -> Tp
-      7: 1.0 # d_theta -> Tp
-      8: 1.0 # x_err -> Tp
-      9: 1.0 # v_err -> Tp
-      10: 1.0 # pitch -> Tp
-      11: 1.0 # pitch_gyro -> Tp
-    # 右腿LQR增益极性 (12个值)
-    # 1.0: 保持原极性, -1.0: 取反
-    right_lqr_gain_polarity:
-      0: 1.0 # theta -> wheel torque
-      1: 1.0 # d_theta -> wheel torque
-      2: 0.0 # x_err -> wheel torque #-1
-      3: 0.0 # v_err -> wheel torque #-1
-      4: 0.0 # pitch -> wheel torque
-      5: 0.0 # pitch_gyro -> wheel torque
-      6: 0.0 # theta -> Tp
-      7: 0.0 # d_theta -> Tp
-      8: 0.0 # x_err -> Tp
-      9: 0.0 # v_err -> Tp
-      10: 0.0 # pitch -> Tp
-      11: 0.0 # pitch_gyro -> Tp
+    # 0: s (位移), 1: dot_s (速度), 2: fai (航向角), 3: dot_fai (航向角速度)
+    # 4: theta_ll (左腿角度), 5: dot_theta_ll (左腿角速度)
+    # 6: theta_lr (右腿角度), 7: dot_theta_lr (右腿角速度)
+    # 8: theta_b (身体角度), 9: dot_theta_b (身体角速度)
+    state_polarity:
+      0: 0.0 # s (位移)
+      1: 0.0 # dot_s (速度)
+      2: -1.0 # fai (航向角)
+      3: -1.0 # dot_fai (航向角速度)
+      4: 0.0 # theta_ll (左腿角度)
+      5: 0.0 # dot_theta_ll (左腿角速度)
+      6: 0.0 # theta_lr (右腿角度)
+      7: 0.0 # dot_theta_lr (右腿角速度)
+      8: -0.0 # theta_b (身体角度)
+      9: -0.0 # dot_theta_b (身体角速度)
