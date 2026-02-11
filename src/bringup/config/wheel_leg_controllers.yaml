@@ -59,7 +59,7 @@ vmc_controller:
     right_rear_joint_name: "jAG"
 
     # 话题配置
-    imu_topic: "/imu/data"
+    imu_topic: "/imu_broadcaster/imu"
     force_command_topic: "/vmc_controller/force_command"
 
     # 控制参数

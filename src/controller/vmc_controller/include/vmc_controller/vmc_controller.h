@@ -116,6 +116,9 @@ protected:
   double right_front_joint_invert_sign_;
   double right_rear_joint_invert_sign_;
 
+  // Pitch axis polarity (used to invert pitch and pitch_gyro if needed)
+  double pitch_invert_sign_;
+
   // Subscriptions (for IMU and force commands)
   rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr imu_subscription_;
   rclcpp::Subscription<std_msgs::msg::Float64MultiArray>::SharedPtr force_command_subscription_;

@@ -33,6 +33,7 @@ VMCController::VMCController()
   , left_rear_joint_invert_sign_(1.0)
   , right_front_joint_invert_sign_(1.0)
   , right_rear_joint_invert_sign_(1.0)
+  , pitch_invert_sign_(1.0)
   , enable_debug_(false)
   , debug_print_frequency_(10.0)
   , debug_print_counter_(0)
@@ -85,6 +86,9 @@ controller_interface::CallbackReturn VMCController::on_init()
     auto_declare<double>("left_rear_joint_invert_sign", 1.0);
     auto_declare<double>("right_front_joint_invert_sign", 1.0);
     auto_declare<double>("right_rear_joint_invert_sign", 1.0);
+
+    // Pitch轴极性配置（用于匹配VMC坐标系）
+    auto_declare<double>("pitch_invert_sign", 1.0);
 
     // 调试参数
     auto_declare<bool>("enable_debug", true);
@@ -140,6 +144,9 @@ controller_interface::CallbackReturn VMCController::on_configure(const rclcpp_li
   right_front_joint_invert_sign_ = get_node()->get_parameter("right_front_joint_invert_sign").as_double();
   right_rear_joint_invert_sign_ = get_node()->get_parameter("right_rear_joint_invert_sign").as_double();
 
+  // 读取Pitch轴极性配置
+  pitch_invert_sign_ = get_node()->get_parameter("pitch_invert_sign").as_double();
+
   // 读取调试参数
   enable_debug_ = get_node()->get_parameter("enable_debug").as_bool();
   debug_print_frequency_ = get_node()->get_parameter("debug_print_frequency").as_double();
@@ -185,6 +192,7 @@ controller_interface::CallbackReturn VMCController::on_configure(const rclcpp_li
   RCLCPP_INFO(get_node()->get_logger(), "Joint invert signs: LF=%.1f, LR=%.1f, RF=%.1f, RR=%.1f",
               left_front_joint_invert_sign_, left_rear_joint_invert_sign_, right_front_joint_invert_sign_,
               right_rear_joint_invert_sign_);
+  RCLCPP_INFO(get_node()->get_logger(), "Pitch invert sign: %.1f", pitch_invert_sign_);
 
   return controller_interface::CallbackReturn::SUCCESS;
 }
@@ -344,6 +352,10 @@ controller_interface::return_type VMCController::update(const rclcpp::Time& time
   double right_front_pos = right_front_joint_invert_sign_ * (right_front_pos_raw + right_front_joint_offset_);
   double right_rear_pos = right_rear_joint_invert_sign_ * (right_rear_pos_raw + right_rear_joint_offset_);
 
+  // Apply pitch polarity
+  double pitch_correct = pitch_invert_sign_ * pitch_;
+  double pitch_gyro_correct = pitch_invert_sign_ * pitch_gyro_;
+
   // Normalize joint angles to [-π, π] range to prevent angle accumulation
   auto normalize_angle = [](double angle) {
     while (angle > M_PI)
@@ -373,8 +385,6 @@ controller_interface::return_type VMCController::update(const rclcpp::Time& time
   // Note: We need to set F0 first (use previous value or 0) to calculate theta
   left_leg_.setF0(left_F0_);
   right_leg_.setF0(right_F0_);
-  left_leg_.calc1Left(pitch_, pitch_gyro_, dt);
-  right_leg_.calc1Right(pitch_, pitch_gyro_, dt);
 
   // Get current L0 and theta values
   double left_current_l0 = left_leg_.getL0();
@@ -387,8 +397,8 @@ controller_interface::return_type VMCController::update(const rclcpp::Time& time
   right_F0_ = right_leg_l0_pid_->update(right_current_l0, time);
 
   // Calculate Tp using PID with theta as feedback
-  left_Tp_ = left_leg_theta_pid_->update(left_current_theta, time);
-  right_Tp_ = right_leg_theta_pid_->update(right_current_theta, time);
+  // left_Tp_ = left_leg_theta_pid_->update(left_current_theta, time);
+  // right_Tp_ = right_leg_theta_pid_->update(right_current_theta, time);
 
   // Set F0 and Tp
   left_leg_.setF0(left_F0_);
@@ -397,10 +407,11 @@ controller_interface::return_type VMCController::update(const rclcpp::Time& time
   right_leg_.setTp(right_Tp_);
 
   // Recalculate VMC with updated F0 and Tp
-  left_leg_.calc1Left(pitch_, pitch_gyro_, dt);
+  // Apply pitch polarity (reuse the adjusted values from above)
+  left_leg_.calc1Left(pitch_correct, pitch_gyro_correct, dt);
   left_leg_.calc2();
 
-  right_leg_.calc1Right(pitch_, pitch_gyro_, dt);
+  right_leg_.calc1Right(pitch_correct, pitch_gyro_correct, dt);
   right_leg_.calc2();
 
   // Clamp and set torques

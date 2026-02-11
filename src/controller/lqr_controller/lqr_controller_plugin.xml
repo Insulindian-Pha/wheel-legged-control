@@ -1,0 +1,9 @@
+<?xml version="1.0"?>
+<library path="lqr_controller">
+  <class name="lqr_controller/LQRController" type="lqr_controller::LQRController" base_class_type="controller_interface::ControllerInterface">
+    <description>
+      LQR Controller for wheel-legged robot balance control using Linear Quadratic Regulator
+    </description>
+  </class>
+</library>
+

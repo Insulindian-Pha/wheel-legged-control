@@ -25,8 +25,8 @@ VMCLeg::VMCLeg() : first_flag(0), leg_flag(0)
 
 void VMCLeg::calc1Right(double pitch, double pitch_gyro, double dt)
 {
-  double PitchR = pitch;
-  double PitchGyroR = pitch_gyro;
+  double PitchR = -pitch;
+  double PitchGyroR = -pitch_gyro;
 
   YD = l4_ * sin(phi4_);        // D的y坐标
   YB = l1_ * sin(phi1_);        // B的y坐标
@@ -74,8 +74,8 @@ void VMCLeg::calc1Right(double pitch, double pitch_gyro, double dt)
 
 void VMCLeg::calc1Left(double pitch, double pitch_gyro, double dt)
 {
-  double PitchL = 0.0 - pitch;
-  double PitchGyroL = 0.0 - pitch_gyro;
+  double PitchL = pitch;
+  double PitchGyroL = pitch_gyro;
 
   YD = l4_ * sin(phi4_);        // D的y坐标
   YB = l1_ * sin(phi1_);        // B的y坐标
