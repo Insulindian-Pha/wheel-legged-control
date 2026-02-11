@@ -6,64 +6,85 @@
 #ifndef LQRCONTROLLER_H
 #define LQRCONTROLLER_H
 
+#include <array>
 #include <memory>
 #include <string>
 #include <vector>
-#include <array>
 
 #include "controller_interface/controller_interface.hpp"
 #include "hardware_interface/types/hardware_interface_type_values.hpp"
+#include "lqr_controller/msg/lqr_state.hpp"
 #include "rclcpp/rclcpp.hpp"
 #include "rclcpp_lifecycle/node_interfaces/lifecycle_node_interface.hpp"
 #include "rclcpp_lifecycle/state.hpp"
+#include "sensor_msgs/msg/imu.hpp"
 #include "std_msgs/msg/float64_multi_array.hpp"
 #include "vmc_controller/msg/vmc_state.hpp"
-#include "lqr_controller/msg/lqr_state.hpp"
 
-namespace lqr_controller
-{
+namespace lqr_controller {
 
-class LQRController : public controller_interface::ControllerInterface
-{
+class LQRController : public controller_interface::ControllerInterface {
 public:
   LQRController();
 
   controller_interface::CallbackReturn on_init() override;
 
-  controller_interface::CallbackReturn on_configure(const rclcpp_lifecycle::State& previous_state) override;
+  controller_interface::CallbackReturn
+  on_configure(const rclcpp_lifecycle::State &previous_state) override;
 
-  controller_interface::CallbackReturn on_activate(const rclcpp_lifecycle::State& previous_state) override;
+  controller_interface::CallbackReturn
+  on_activate(const rclcpp_lifecycle::State &previous_state) override;
 
-  controller_interface::CallbackReturn on_deactivate(const rclcpp_lifecycle::State& previous_state) override;
+  controller_interface::CallbackReturn
+  on_deactivate(const rclcpp_lifecycle::State &previous_state) override;
 
-  controller_interface::return_type update(const rclcpp::Time& time, const rclcpp::Duration& period) override;
+  controller_interface::return_type
+  update(const rclcpp::Time &time, const rclcpp::Duration &period) override;
 
-  controller_interface::InterfaceConfiguration command_interface_configuration() const override;
+  controller_interface::InterfaceConfiguration
+  command_interface_configuration() const override;
 
-  controller_interface::InterfaceConfiguration state_interface_configuration() const override;
+  controller_interface::InterfaceConfiguration
+  state_interface_configuration() const override;
 
 protected:
   // Wheel joint handles
-  std::vector<std::reference_wrapper<hardware_interface::LoanedCommandInterface>> left_wheel_cmd_;
-  std::vector<std::reference_wrapper<hardware_interface::LoanedCommandInterface>> right_wheel_cmd_;
+  std::vector<
+      std::reference_wrapper<hardware_interface::LoanedCommandInterface>>
+      left_wheel_cmd_;
+  std::vector<
+      std::reference_wrapper<hardware_interface::LoanedCommandInterface>>
+      right_wheel_cmd_;
 
-  std::vector<std::reference_wrapper<hardware_interface::LoanedStateInterface>> left_wheel_state_;
-  std::vector<std::reference_wrapper<hardware_interface::LoanedStateInterface>> right_wheel_state_;
+  std::vector<std::reference_wrapper<hardware_interface::LoanedStateInterface>>
+      left_wheel_state_;
+  std::vector<std::reference_wrapper<hardware_interface::LoanedStateInterface>>
+      right_wheel_state_;
 
   // Joint names
   std::string left_wheel_joint_name_;
   std::string right_wheel_joint_name_;
 
   // VMC state subscription
-  rclcpp::Subscription<vmc_controller::msg::VMCState>::SharedPtr vmc_state_subscription_;
+  rclcpp::Subscription<vmc_controller::msg::VMCState>::SharedPtr
+      vmc_state_subscription_;
   std::string vmc_state_topic_;
 
+  // IMU subscription (optional): when imu_topic is non-empty,
+  // pitch/pitch_gyro/yaw/yaw_gyro come from IMU
+  rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr imu_subscription_;
+  std::string imu_topic_;
+  bool use_imu_for_state_; // true when imu_topic_ is non-empty
+  bool received_imu_;      // true after first IMU message received
+
   // Force command publisher (for Tp updates)
-  rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr force_command_publisher_;
+  rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr
+      force_command_publisher_;
   std::string force_command_topic_;
 
   // LQR state publisher
-  rclcpp::Publisher<lqr_controller::msg::LQRState>::SharedPtr lqr_state_publisher_;
+  rclcpp::Publisher<lqr_controller::msg::LQRState>::SharedPtr
+      lqr_state_publisher_;
   std::string lqr_state_topic_;
 
   // VMC state data (from subscription)
@@ -73,7 +94,7 @@ protected:
   double right_d_theta_;
   double pitch_;
   double pitch_gyro_;
-  double left_F0_;  // Current F0 from VMC (to preserve when updating Tp)
+  double left_F0_; // Current F0 from VMC (to preserve when updating Tp)
   double right_F0_;
   bool received_vmc_state_;
 
@@ -93,30 +114,40 @@ protected:
   std::array<double, 10> state_polarity_;
 
   // State estimation (simple integration from wheel velocity)
-  double x_position_;  // Current position (m) - corresponds to 's' in LQR
-  double x_velocity_;  // Current velocity (m/s) - corresponds to 'dot_s' in LQR
-  double x_set_;       // Desired position (m)
-  double v_set_;       // Desired velocity (m/s)
-  double yaw_;         // Yaw angle (rad) - corresponds to 'fai' in LQR
-  double yaw_rate_;    // Yaw rate (rad/s) - corresponds to 'dot_fai' in LQR
+  double x_position_; // Current position (m) - corresponds to 's' in LQR
+  double x_velocity_; // Current velocity (m/s) - corresponds to 'dot_s' in LQR
+  double x_set_;      // Desired position (m)
+  double v_set_;      // Desired velocity (m/s)
+  double yaw_;        // Yaw angle (rad) - corresponds to 'fai' in LQR
+  double yaw_gyro_;   // Yaw angular velocity (rad/s) - corresponds to 'dot_fai'
+                      // in LQR
 
   // Parameters
-  double wheel_radius_;      // Wheel radius for velocity calculation (m)
-  double max_wheel_torque_;  // Maximum wheel torque (Nm)
+  double wheel_radius_;     // Wheel radius for velocity calculation (m)
+  double max_wheel_torque_; // Maximum wheel torque (Nm)
 
   // Callbacks
   void vmc_state_callback(const vmc_controller::msg::VMCState::SharedPtr msg);
+  void imu_callback(const sensor_msgs::msg::Imu::SharedPtr msg);
+
+  // Extract pitch [rad] and yaw [rad] from IMU quaternion (x,y,z,w)
+  static double quaternion_to_pitch(double x, double y, double z, double w);
+  static double quaternion_to_yaw(double x, double y, double z, double w);
 
   // Helper functions
-  void calculate_lqr_control(double& wheel_torque_left, double& wheel_torque_right, double& tp_left, double& tp_right);
+  void calculate_lqr_control(double &wheel_torque_left,
+                             double &wheel_torque_right, double &tp_left,
+                             double &tp_right);
   void update_state_estimation(double dt);
-  void publish_force_command(double left_F0, double left_Tp, double right_F0, double right_Tp);
-  void publish_lqr_state(double wheel_torque_left, double wheel_torque_right, double tp_left, double tp_right);
+  void publish_force_command(double left_F0, double left_Tp, double right_F0,
+                             double right_Tp);
+  void publish_lqr_state(double wheel_torque_left, double wheel_torque_right,
+                         double tp_left, double tp_right);
 
   // Utility function to normalize angle to [-π, π]
   static double normalize_angle(double angle);
 };
 
-}  // namespace lqr_controller
+} // namespace lqr_controller
 
-#endif  // LQRCONTROLLER_H
+#endif // LQRCONTROLLER_H

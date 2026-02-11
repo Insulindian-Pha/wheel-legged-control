@@ -112,6 +112,16 @@ vmc_controller:
           u_clamp_min: -50.0
           i_clamp_max: 5.0
           i_separation_threshold: 0.0
+      # 防劈岔补偿：使左右腿 theta 之和趋于 0（仿 chassisR_task Tp_Pid）
+      anti_split:
+        target: 0.0 # 期望 left_theta + right_theta = 0
+        kp: -100.0
+        ki: 0.0
+        kd: -30.0
+        u_clamp_max: 10.0
+        u_clamp_min: -10.0
+        i_clamp_max: 0.0
+        i_separation_threshold: 0.0
 
 lqr_controller:
   ros__parameters:
@@ -121,11 +131,13 @@ lqr_controller:
 
     # 话题配置
     vmc_state_topic: "/vmc_controller/vmc_state"
+    # IMU 话题：设为非空则用 IMU 提供 pitch/pitch_gyro/yaw/yaw_gyro；留空则用 VMC 与轮速积分
+    imu_topic: "/imu_broadcaster/imu"
     force_command_topic: "/vmc_controller/force_command"
 
     # 物理参数
     wheel_radius: 0.06 # 轮半径 (m)
-    max_wheel_torque: 4.0 # 最大轮毂电机力矩 (Nm)
+    max_wheel_torque: 10.0 # 最大轮毂电机力矩 (Nm)
 
     # 期望值
     x_set: 0.0 # 期望位置 (m)
@@ -154,8 +166,8 @@ lqr_controller:
       5: -1.44318834 # dot_theta_ll (左腿角速度) -> 左轮力矩
       6: -1.96696540 # theta_lr (右腿角度) -> 左轮力矩
       7: -0.35920430 # dot_theta_lr (右腿角速度) -> 左轮力矩
-      8: -0.00959538 # theta_b (身体角度) -> 左轮力矩
-      9: -0.00175215 # dot_theta_b (身体角速度) -> 左轮力矩
+      8: -1.959538 # theta_b (身体角度) -> 左轮力矩
+      9: -1.0175215 # dot_theta_b (身体角速度) -> 左轮力矩
 
     # LQR K 值 - 右轮力矩 (K[10:19])
     right_wheel_lqr_gains:
@@ -167,8 +179,8 @@ lqr_controller:
       5: -0.35920430 # dot_theta_ll (左腿角速度) -> 右轮力矩
       6: -10.54371396 # theta_lr (右腿角度) -> 右轮力矩
       7: -1.44318834 # dot_theta_lr (右腿角速度) -> 右轮力矩
-      8: -0.00959538 # theta_b (身体角度) -> 右轮力矩
-      9: -0.00175215 # dot_theta_b (身体角速度) -> 右轮力矩
+      8: -1.0959538 # theta_b (身体角度) -> 右轮力矩
+      9: -1.0175215 # dot_theta_b (身体角速度) -> 右轮力矩
 
     # LQR K 值 - 左腿力矩 (K[20:29])
     left_leg_lqr_gains:
@@ -203,13 +215,13 @@ lqr_controller:
     # 6: theta_lr (右腿角度), 7: dot_theta_lr (右腿角速度)
     # 8: theta_b (身体角度), 9: dot_theta_b (身体角速度)
     state_polarity:
-      0: 0.0 # s (位移)
-      1: 0.0 # dot_s (速度)
-      2: -1.0 # fai (航向角)
-      3: -1.0 # dot_fai (航向角速度)
-      4: 0.0 # theta_ll (左腿角度)
-      5: 0.0 # dot_theta_ll (左腿角速度)
-      6: 0.0 # theta_lr (右腿角度)
-      7: 0.0 # dot_theta_lr (右腿角速度)
-      8: -0.0 # theta_b (身体角度)
-      9: -0.0 # dot_theta_b (身体角速度)
+      0: 1.0 # s (位移)
+      1: 1.0 # dot_s (速度)
+      2: 0.0 # fai (航向角)
+      3: 0.0 # dot_fai (航向角速度)
+      4: 1.0 # theta_ll (左腿角度)
+      5: 1.0 # dot_theta_ll (左腿角速度)
+      6: 1.0 # theta_lr (右腿角度)
+      7: 1.0 # dot_theta_lr (右腿角速度)
+      8: 1.0 # theta_b (身体角度)
+      9: 1.0 # dot_theta_b (身体角速度)

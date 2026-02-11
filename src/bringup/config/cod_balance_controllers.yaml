@@ -150,6 +150,7 @@ lqr_controller:
 
     # 话题配置
     vmc_state_topic: "/vmc_controller/vmc_state"
+    imu_topic: "/imu/data"  # 非空则用 IMU 提供 pitch/pitch_gyro/yaw/yaw_gyro
     force_command_topic: "/vmc_controller/force_command"
 
     # 物理参数

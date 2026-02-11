@@ -87,6 +87,10 @@ protected:
   std::shared_ptr<PID::PidROS> left_leg_theta_pid_;
   std::shared_ptr<PID::PidROS> right_leg_theta_pid_;
 
+  // 防劈岔补偿：使左右腿 theta 之和趋于 0，避免两腿劈岔
+  std::shared_ptr<PID::PidROS> anti_split_pid_;
+  bool enable_anti_split_;
+
   // Desired L0 values
   double left_desired_l0_;
   double right_desired_l0_;
