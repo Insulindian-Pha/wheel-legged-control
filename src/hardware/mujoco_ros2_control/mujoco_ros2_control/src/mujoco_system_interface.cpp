@@ -724,6 +724,18 @@ MujocoSystemInterface::on_init(const hardware_interface::HardwareComponentInterf
       hardware_interface::parse_bool(get_hardware_parameter(get_hardware_info(), "headless").value_or("false"));
   RCLCPP_INFO_EXPRESSION(get_logger(), headless, "Running in HEADLESS mode.");
 
+  // Pull window size parameters, if present. If not set or set to 0, use primary monitor resolution.
+  window_width_ = std::stoi(get_hardware_parameter(get_hardware_info(), "window_width").value_or("0"));
+  window_height_ = std::stoi(get_hardware_parameter(get_hardware_info(), "window_height").value_or("0"));
+  if (window_width_ > 0 && window_height_ > 0)
+  {
+    RCLCPP_INFO(get_logger(), "Window size set to %d x %d", window_width_, window_height_);
+  }
+  else
+  {
+    RCLCPP_INFO(get_logger(), "Window size not specified, will use primary monitor resolution");
+  }
+
   // We essentially reconstruct the 'simulate.cc::main()' function here, and
   // launch a Simulate object with all necessary rendering process/options
   // attached.
@@ -758,30 +770,47 @@ MujocoSystemInterface::on_init(const hardware_interface::HardwareComponentInterf
                                             /* is_passive = */ false);
 
       // Add ros2 control icon for the taskbar
-      std::string icon_location =
-          ament_index_cpp::get_package_share_directory("mujoco_ros2_control") + "/resources/mujoco_logo.png";
-      std::vector<unsigned char> image;
-      unsigned width, height;
-      unsigned error = lodepng::decode(image, width, height, icon_location);
-
-      // Only process the icon if we successfully loaded it. Otherwise, just proceed without
-      if (error)
       {
-        RCLCPP_WARN_STREAM(get_logger(), "LodePNG error " << error << ": " << lodepng_error_text(error)
-                                                          << ". Icon file not loaded: " << icon_location);
+        std::string icon_location =
+            ament_index_cpp::get_package_share_directory("mujoco_ros2_control") + "/resources/mujoco_logo.png";
+        std::vector<unsigned char> image;
+        unsigned icon_width, icon_height;
+        unsigned error = lodepng::decode(image, icon_width, icon_height, icon_location);
+
+        // Only process the icon if we successfully loaded it. Otherwise, just proceed without
+        if (error)
+        {
+          RCLCPP_WARN_STREAM(get_logger(), "LodePNG error " << error << ": " << lodepng_error_text(error)
+                                                            << ". Icon file not loaded: " << icon_location);
+        }
+        else
+        {
+          GLFWimage icon;
+          icon.width = static_cast<int>(icon_width);
+          icon.height = static_cast<int>(icon_height);
+          icon.pixels = image.data();
+          glfwSetWindowIcon(glfwGetCurrentContext(), 1, &icon);
+        }
+      }
+
+      // Set glfw window size
+      int window_width, window_height;
+      if (window_width_ > 0 && window_height_ > 0)
+      {
+        // Use configured window size
+        window_width = window_width_;
+        window_height = window_height_;
+        RCLCPP_INFO(get_logger(), "Setting window size to configured: %d x %d", window_width, window_height);
       }
       else
       {
-        GLFWimage icon;
-        icon.width = width;
-        icon.height = height;
-        icon.pixels = image.data();
-        glfwSetWindowIcon(glfwGetCurrentContext(), 1, &icon);
+        // Use primary monitor resolution
+        const GLFWvidmode* mode = glfwGetVideoMode(glfwGetPrimaryMonitor());
+        window_width = mode->width;
+        window_height = mode->height;
+        RCLCPP_INFO(get_logger(), "Setting window size to primary monitor: %d x %d", window_width, window_height);
       }
-
-      // Set glfw window size to max size of the primary monitor
-      const GLFWvidmode* mode = glfwGetVideoMode(glfwGetPrimaryMonitor());
-      glfwSetWindowSize(glfwGetCurrentContext(), mode->width, mode->height);
+      glfwSetWindowSize(glfwGetCurrentContext(), window_width, window_height);
 
       // Hide UI panels programmatically
       sim_->ui0_enable = true;  // Hide left panel

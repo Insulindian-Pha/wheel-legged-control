@@ -130,7 +130,8 @@ public:
    * @brief Returns a copy of the MuJoCo model.
    *
    * This method locks the simulation mutex to ensure thread safety.
-   * @param dest Pointer to an mjModel structure where the copy will be stored. The pointer will be allocated if it is nullptr.
+   * @param dest Pointer to an mjModel structure where the copy will be stored. The pointer will be allocated if it is
+   * nullptr.
    */
   void get_model(mjModel*& dest);
 
@@ -138,7 +139,8 @@ public:
    * @brief Returns a copy of the current MuJoCo data.
    *
    * This method locks the simulation mutex to ensure thread safety.
-   * @param dest Pointer to an mjData structure where the copy will be stored. The pointer will be allocated if it is nullptr.
+   * @param dest Pointer to an mjData structure where the copy will be stored. The pointer will be allocated if it is
+   * nullptr.
    */
   void get_data(mjData*& dest);
 
@@ -316,6 +318,10 @@ private:
   // Speed scaling parameter. if set to >0 then we ignore the value set in the simulate app and instead
   // attempt to loop at whatever this is set to. If this is <0, then we use the value from the app.
   double sim_speed_factor_;
+
+  // Window size parameters. If set to >0, use these values; otherwise use primary monitor resolution.
+  int window_width_;
+  int window_height_;
 
   // Primary simulate object
   std::unique_ptr<mujoco::Simulate> sim_;
