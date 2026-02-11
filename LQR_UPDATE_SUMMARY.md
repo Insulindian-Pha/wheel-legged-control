@@ -8,18 +8,18 @@
 
 ### 新的10状态量 (与Python脚本一致):
 
-| 索引 | 状态名称 | 描述 | C++变量 |
-|------|---------|------|---------|
-| 0 | s | 位移 | `x_position_` |
-| 1 | dot_s | 速度 | `x_velocity_` |
-| 2 | fai | 航向角 | `yaw_` |
-| 3 | dot_fai | 航向角速度 | `yaw_rate_` |
-| 4 | theta_ll | 左腿角度 | `left_theta_` |
-| 5 | dot_theta_ll | 左腿角速度 | `left_d_theta_` |
-| 6 | theta_lr | 右腿角度 | `right_theta_` |
-| 7 | dot_theta_lr | 右腿角速度 | `right_d_theta_` |
-| 8 | theta_b | 身体角度(pitch) | `pitch_` |
-| 9 | dot_theta_b | 身体角速度 | `pitch_gyro_` |
+| 索引 | 状态名称     | 描述            | C++变量          |
+| ---- | ------------ | --------------- | ---------------- |
+| 0    | s            | 位移            | `x_position_`    |
+| 1    | dot_s        | 速度            | `x_velocity_`    |
+| 2    | fai          | 航向角          | `yaw_`           |
+| 3    | dot_fai      | 航向角速度      | `yaw_rate_`      |
+| 4    | theta_ll     | 左腿角度        | `left_theta_`    |
+| 5    | dot_theta_ll | 左腿角速度      | `left_d_theta_`  |
+| 6    | theta_lr     | 右腿角度        | `right_theta_`   |
+| 7    | dot_theta_lr | 右腿角速度      | `right_d_theta_` |
+| 8    | theta_b      | 身体角度(pitch) | `pitch_`         |
+| 9    | dot_theta_b  | 身体角速度      | `pitch_gyro_`    |
 
 ## K矩阵结构
 
@@ -137,4 +137,5 @@ cd /home/yons/code/learn_repo/wheel-legged-control/src/controller/lqr_controller
 参考文件:
 - `src/controller/lqr_controller/scripts/lagrange.py` (K矩阵计算)
 - `src/controller/lqr_controller/scripts/setup_and_run.sh` (运行脚本)
+
 
