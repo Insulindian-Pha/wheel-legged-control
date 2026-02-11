@@ -19,6 +19,7 @@
 #include "sensor_msgs/msg/imu.hpp"
 #include "std_msgs/msg/float64_multi_array.hpp"
 #include "vmc_controller/vmc_calc.h"
+#include "vmc_controller/msg/vmc_state.hpp"
 #include "pid_ros.hpp"
 
 namespace vmc_controller
@@ -97,6 +98,7 @@ protected:
   // Parameters
   std::string imu_topic_;
   std::string force_command_topic_;
+  std::string vmc_state_topic_;
   double max_torque_;
 
   // VMC parameters
@@ -118,6 +120,9 @@ protected:
   rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr imu_subscription_;
   rclcpp::Subscription<std_msgs::msg::Float64MultiArray>::SharedPtr force_command_subscription_;
 
+  // Publisher (for VMC state)
+  rclcpp::Publisher<vmc_controller::msg::VMCState>::SharedPtr vmc_state_publisher_;
+
   // Callbacks
   void imu_callback(const sensor_msgs::msg::Imu::SharedPtr msg);
   void force_command_callback(const std_msgs::msg::Float64MultiArray::SharedPtr msg);
@@ -135,6 +140,10 @@ protected:
 
   // Debug functions
   bool is_valid_number(double value, const std::string& name) const;
+
+  // Publish VMC state
+  void publish_vmc_state(double left_front_torque_raw, double left_rear_torque_raw, double right_front_torque_raw,
+                         double right_rear_torque_raw);
 };
 
 }  // namespace vmc_controller

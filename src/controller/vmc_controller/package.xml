@@ -16,6 +16,10 @@
   <depend>hardware_interface</depend>
   <depend>pluginlib</depend>
   <depend>pid_controller</depend>
+  <depend>rosidl_default_generators</depend>
+  <exec_depend>rosidl_default_runtime</exec_depend>
+
+  <member_of_group>rosidl_interface_packages</member_of_group>
 
   <export>
     <build_type>ament_cmake</build_type>

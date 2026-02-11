@@ -50,6 +50,7 @@ controller_interface::CallbackReturn VMCController::on_init()
     auto_declare<std::string>("right_rear_joint_name", "Right_rear_joint");
     auto_declare<std::string>("imu_topic", "/imu/data");
     auto_declare<std::string>("force_command_topic", "/vmc_controller/force_command");
+    auto_declare<std::string>("vmc_state_topic", "/vmc_controller/vmc_state");
     auto_declare<double>("max_torque", 90.0);
 
     // VMC杆长参数
@@ -107,6 +108,7 @@ controller_interface::CallbackReturn VMCController::on_configure(const rclcpp_li
   right_rear_joint_name_ = get_node()->get_parameter("right_rear_joint_name").as_string();
   imu_topic_ = get_node()->get_parameter("imu_topic").as_string();
   force_command_topic_ = get_node()->get_parameter("force_command_topic").as_string();
+  vmc_state_topic_ = get_node()->get_parameter("vmc_state_topic").as_string();
   max_torque_ = get_node()->get_parameter("max_torque").as_double();
 
   l1_ = get_node()->get_parameter("l1").as_double();
@@ -168,9 +170,13 @@ controller_interface::CallbackReturn VMCController::on_configure(const rclcpp_li
   force_command_subscription_ = get_node()->create_subscription<std_msgs::msg::Float64MultiArray>(
       force_command_topic_, 10, std::bind(&VMCController::force_command_callback, this, std::placeholders::_1));
 
+  // Create publisher for VMC state
+  vmc_state_publisher_ = get_node()->create_publisher<vmc_controller::msg::VMCState>(vmc_state_topic_, 10);
+
   RCLCPP_INFO(get_node()->get_logger(), "VMC Controller configured");
   RCLCPP_INFO(get_node()->get_logger(), "Subscribing to IMU: %s", imu_topic_.c_str());
   RCLCPP_INFO(get_node()->get_logger(), "Subscribing to force commands: %s", force_command_topic_.c_str());
+  RCLCPP_INFO(get_node()->get_logger(), "Publishing VMC state to: %s", vmc_state_topic_.c_str());
   RCLCPP_INFO(get_node()->get_logger(), "Max torque: %.2f Nm", max_torque_);
   RCLCPP_INFO(get_node()->get_logger(), "VMC parameters: l1=%.3f, l2=%.3f, l3=%.3f, l4=%.3f, l5=%.3f", l1_, l2_, l3_,
               l4_, l5_);
@@ -415,6 +421,9 @@ controller_interface::return_type VMCController::update(const rclcpp::Time& time
   right_front_joint_cmd_[0].get().set_value(right_front_torque);
   right_rear_joint_cmd_[0].get().set_value(right_rear_torque);
 
+  // Publish VMC state
+  publish_vmc_state(left_front_torque_raw, left_rear_torque_raw, right_front_torque_raw, right_rear_torque_raw);
+
   last_update_time_ = time;
 
   return controller_interface::return_type::OK;
@@ -482,6 +491,42 @@ bool VMCController::is_valid_number(double value, const std::string& name) const
     return false;
   }
   return true;
+}
+
+void VMCController::publish_vmc_state(double left_front_torque_raw, double left_rear_torque_raw,
+                                      double right_front_torque_raw, double right_rear_torque_raw)
+{
+  // Publish VMC state
+  if (vmc_state_publisher_)
+  {
+    auto vmc_state_msg = vmc_controller::msg::VMCState();
+    vmc_state_msg.header.stamp = get_node()->now();
+    vmc_state_msg.header.frame_id = "base_link";
+
+    // Left leg state
+    vmc_state_msg.left_theta = left_leg_.getTheta();
+    vmc_state_msg.left_d_theta = left_leg_.getDTheta();
+    vmc_state_msg.left_l0 = left_leg_.getL0();
+    vmc_state_msg.left_f0 = left_F0_;
+    vmc_state_msg.left_tp = left_Tp_;
+    vmc_state_msg.left_torque_front = left_front_torque_raw;
+    vmc_state_msg.left_torque_rear = left_rear_torque_raw;
+
+    // Right leg state
+    vmc_state_msg.right_theta = right_leg_.getTheta();
+    vmc_state_msg.right_d_theta = right_leg_.getDTheta();
+    vmc_state_msg.right_l0 = right_leg_.getL0();
+    vmc_state_msg.right_f0 = right_F0_;
+    vmc_state_msg.right_tp = right_Tp_;
+    vmc_state_msg.right_torque_front = right_front_torque_raw;
+    vmc_state_msg.right_torque_rear = right_rear_torque_raw;
+
+    // IMU data
+    vmc_state_msg.pitch = pitch_;
+    vmc_state_msg.pitch_gyro = pitch_gyro_;
+
+    vmc_state_publisher_->publish(vmc_state_msg);
+  }
 }
 
 controller_interface::InterfaceConfiguration VMCController::command_interface_configuration() const

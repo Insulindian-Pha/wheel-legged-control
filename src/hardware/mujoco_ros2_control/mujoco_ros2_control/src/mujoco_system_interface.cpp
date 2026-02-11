@@ -502,7 +502,8 @@ ActuatorType getActuatorType(const mjModel* mj_model, int mujoco_actuator_id)
 
 /**
  * @brief Get the MuJoCo actuator ID based on a name. First this method looks for a joint that matches the passed name,
- * and finds the actuator attached to it. If this doesn't exist, it will then look for the actuator with the passed name.
+ * and finds the actuator attached to it. If this doesn't exist, it will then look for the actuator with the passed
+ * name.
  * @param actuator_name The name of the actuator.
  * @param mj_model Pointer to the MuJoCo model.
  * @return The actuator ID if found, otherwise -1.
@@ -962,11 +963,11 @@ MujocoSystemInterface::on_init(const hardware_interface::HardwareComponentInterf
     floating_base_msg_.child_frame_id =
         std::string(mj_id2name(mj_model_, mjtObj::mjOBJ_BODY, mj_model_->jnt_bodyid[free_joint_id_]));
 
-    RCLCPP_INFO(
-        get_logger(),
-        "Publishing floating base odometry using the free joint : '%s' attached to the body '%s' on topic: '%s'",
-        mj_id2name(mj_model_, mjtObj::mjOBJ_JOINT, free_joint_id_), floating_base_msg_.child_frame_id.c_str(),
-        odom_topic_name.c_str());
+    RCLCPP_INFO(get_logger(),
+                "Publishing floating base odometry using the free joint : '%s' attached to the body '%s' on topic: "
+                "'%s'",
+                mj_id2name(mj_model_, mjtObj::mjOBJ_JOINT, free_joint_id_), floating_base_msg_.child_frame_id.c_str(),
+                odom_topic_name.c_str());
   }
 
   // Pull joint and sensor information
@@ -1016,14 +1017,16 @@ MujocoSystemInterface::on_init(const hardware_interface::HardwareComponentInterf
   // Verify the update rate
   const mjtNum desired_timestep = 1.0 / static_cast<double>(get_hardware_info().rw_rate);
   const bool under_sampled = mj_model_->opt.timestep > desired_timestep;
-  RCLCPP_WARN_EXPRESSION(
-      get_logger(), under_sampled,
-      "MuJoCo simulator frequency %lu Hz (timestep %.6f sec) is smaller than the controller manager's update rate %lu "
-      "Hz. The simulation may be under-sampled and this means that there will be some discrepancies in the rate at "
-      "which controllers update cycles run. Either increase the MuJoCo timestep or decrease the controller manager's "
-      "update rate.",
-      static_cast<unsigned long>(1.0 / mj_model_->opt.timestep), mj_model_->opt.timestep,
-      static_cast<unsigned long>(get_hardware_info().rw_rate));
+  RCLCPP_WARN_EXPRESSION(get_logger(), under_sampled,
+                         "MuJoCo simulator frequency %lu Hz (timestep %.6f sec) is smaller than the controller "
+                         "manager's update rate %lu "
+                         "Hz. The simulation may be under-sampled and this means that there will be some discrepancies "
+                         "in the rate at "
+                         "which controllers update cycles run. Either increase the MuJoCo timestep or decrease the "
+                         "controller manager's "
+                         "update rate.",
+                         static_cast<unsigned long>(1.0 / mj_model_->opt.timestep), mj_model_->opt.timestep,
+                         static_cast<unsigned long>(get_hardware_info().rw_rate));
 #endif
 
   // When the interface is activated, we start the physics engine.
@@ -1264,9 +1267,8 @@ MujocoSystemInterface::on_deactivate(const rclcpp_lifecycle::State& /*previous_s
   return hardware_interface::CallbackReturn::SUCCESS;
 }
 
-hardware_interface::return_type
-MujocoSystemInterface::perform_command_mode_switch(const std::vector<std::string>& start_interfaces,
-                                                   const std::vector<std::string>& stop_interfaces)
+hardware_interface::return_type MujocoSystemInterface::perform_command_mode_switch(
+    const std::vector<std::string>& start_interfaces, const std::vector<std::string>& stop_interfaces)
 {
   auto update_joint_interface = [this](const std::string& interface_name, bool enabled) {
     size_t delimiter_pos = interface_name.find('/');
@@ -1291,10 +1293,9 @@ MujocoSystemInterface::perform_command_mode_switch(const std::vector<std::string
 
     const auto actuator_name = get_joint_actuator_name(joint_name, get_hardware_info(), mj_model_);
 
-    auto actuator_it = std::find_if(mujoco_actuator_data_.begin(), mujoco_actuator_data_.end(),
-                                    [&actuator_name, this](const MuJoCoActuatorData& actuator) {
-                                      return actuator.joint_name == actuator_name;
-                                    });
+    auto actuator_it = std::find_if(
+        mujoco_actuator_data_.begin(), mujoco_actuator_data_.end(),
+        [&actuator_name, this](const MuJoCoActuatorData& actuator) { return actuator.joint_name == actuator_name; });
 
     if (actuator_it == mujoco_actuator_data_.end())
     {
@@ -1384,7 +1385,8 @@ MujocoSystemInterface::perform_command_mode_switch(const std::vector<std::string
   return hardware_interface::return_type::OK;
 }
 
-hardware_interface::return_type MujocoSystemInterface::read(const rclcpp::Time& time, const rclcpp::Duration& /*period*/)
+hardware_interface::return_type MujocoSystemInterface::read(const rclcpp::Time& time,
+                                                            const rclcpp::Duration& /*period*/)
 {
   // Joint states
   actuator_state_msg_.header.stamp = time;
@@ -1702,7 +1704,8 @@ bool MujocoSystemInterface::register_mujoco_actuators()
 
     // Initialize PID controllers for actuators that have them configured
     const auto initialize_position_pids = [&]() -> bool {
-// after humble has an additional argument in the PidROS constructor, and uses a different function to initialize from parameters
+// after humble has an additional argument in the PidROS constructor, and uses a different function to initialize from
+// parameters
 #if ROS_DISTRO_HUMBLE
       actuator_data.pos_pid = std::make_shared<control_toolbox::PidROS>(
           get_node(), "pid_gains.position." + actuator_data.joint_name, false);
@@ -1718,7 +1721,8 @@ bool MujocoSystemInterface::register_mujoco_actuators()
     };
 
     const auto initialize_velocity_pids = [&]() -> bool {
-// after humble has an additional argument in the PidROS constructor, and uses a different function to initialize from parameters
+// after humble has an additional argument in the PidROS constructor, and uses a different function to initialize from
+// parameters
 #if ROS_DISTRO_HUMBLE
       actuator_data.vel_pid = std::make_shared<control_toolbox::PidROS>(
           get_node(), "pid_gains.velocity." + actuator_data.joint_name, false);
@@ -1865,10 +1869,9 @@ void MujocoSystemInterface::register_urdf_joints(const hardware_interface::Hardw
     if (joint.parameters.find("mimic") != joint.parameters.end())
     {
       const auto mimicked_joint = joint.parameters.at("mimic");
-      const auto mimicked_joint_it = std::find_if(hardware_info.joints.begin(), hardware_info.joints.end(),
-                                                  [&mimicked_joint](const hardware_interface::ComponentInfo& info) {
-                                                    return info.name == mimicked_joint;
-                                                  });
+      const auto mimicked_joint_it = std::find_if(
+          hardware_info.joints.begin(), hardware_info.joints.end(),
+          [&mimicked_joint](const hardware_interface::ComponentInfo& info) { return info.name == mimicked_joint; });
       if (mimicked_joint_it == hardware_info.joints.end())
       {
         throw std::runtime_error(std::string("Mimicked joint '") + mimicked_joint + "' not found");
@@ -1916,7 +1919,8 @@ void MujocoSystemInterface::register_urdf_joints(const hardware_interface::Hardw
         else if (state_if.name == hardware_interface::HW_IF_EFFORT ||
                  state_if.name == hardware_interface::HW_IF_TORQUE || state_if.name == hardware_interface::HW_IF_FORCE)
         {
-          // We never set data for effort from an initial conditions file, so just default to the initial value if it exists.
+          // We never set data for effort from an initial conditions file, so just default to the initial value if it
+          // exists.
           joint_data.effort_interface.state_ = get_initial_value(state_if);
         }
 
@@ -1961,7 +1965,8 @@ void MujocoSystemInterface::register_urdf_joints(const hardware_interface::Hardw
             actuator_it->is_position_control_enabled = false;
             actuator_it->is_position_pid_control_enabled = true;
 
-// just disabling for humble because the member variables are different. Could make a different one for humble if desired
+// just disabling for humble because the member variables are different. Could make a different one for humble if
+// desired
 #if !ROS_DISTRO_HUMBLE
             const auto gains = get_pid_gains(actuator_it->pos_pid);
             RCLCPP_INFO(get_logger(),
@@ -1994,13 +1999,15 @@ void MujocoSystemInterface::register_urdf_joints(const hardware_interface::Hardw
           // Direct velocity control enabled for velocity actuator
           actuator_it->is_velocity_control_enabled = true;
         }
-        else if (actuator_it->actuator_type == ActuatorType::MOTOR || actuator_it->actuator_type == ActuatorType::CUSTOM)
+        else if (actuator_it->actuator_type == ActuatorType::MOTOR ||
+                 actuator_it->actuator_type == ActuatorType::CUSTOM)
         {
           if (actuator_it->has_vel_pid)
           {
             actuator_it->is_velocity_control_enabled = false;
             actuator_it->is_velocity_pid_control_enabled = true;
-// just disabling for humble because the member variables are different. Could make a different one for humble if desired
+// just disabling for humble because the member variables are different. Could make a different one for humble if
+// desired
 #if !ROS_DISTRO_HUMBLE
             const auto gains = get_pid_gains(actuator_it->vel_pid);
             RCLCPP_INFO(get_logger(),
@@ -2025,15 +2032,17 @@ void MujocoSystemInterface::register_urdf_joints(const hardware_interface::Hardw
       {
         // Effort command interface:
         // Direct control for effort actuators; not supported for position or velocity actuators.
-        RCLCPP_ERROR_EXPRESSION(
-            get_logger(),
-            actuator_it->actuator_type == ActuatorType::POSITION || actuator_it->actuator_type == ActuatorType::VELOCITY,
-            "Effort command interface for the joint : %s is not supported with position or velocity actuator."
-            "Skipping it.",
-            actuator_name.c_str());
+        RCLCPP_ERROR_EXPRESSION(get_logger(),
+                                actuator_it->actuator_type == ActuatorType::POSITION ||
+                                    actuator_it->actuator_type == ActuatorType::VELOCITY,
+                                "Effort command interface for the joint : %s is not supported with position or "
+                                "velocity actuator."
+                                "Skipping it.",
+                                actuator_name.c_str());
         if (actuator_it->actuator_type == ActuatorType::MOTOR || actuator_it->actuator_type == ActuatorType::CUSTOM)
         {
-          RCLCPP_INFO(get_logger(), "Using MuJoCo motor or custom actuator for the joint : '%s'", actuator_name.c_str());
+          RCLCPP_INFO(get_logger(), "Using MuJoCo motor or custom actuator for the joint : '%s'",
+                      actuator_name.c_str());
           // Direct effort control enabled for MOTOR or CUSTOM actuator
           actuator_it->is_effort_control_enabled = true;
         }
@@ -2436,7 +2445,8 @@ bool MujocoSystemInterface::set_override_start_positions(const std::string& over
   std::vector<double> qvel = parseAttr(keyElem, "qvel");
   std::vector<double> ctrl = parseAttr(keyElem, "ctrl");
 
-  // we already put out an error message saying that it couldn't load specific things, so we don't need to say anything else
+  // we already put out an error message saying that it couldn't load specific things, so we don't need to say anything
+  // else
   if (qpos.empty() || qvel.empty() || ctrl.empty())
   {
     return false;
@@ -2474,10 +2484,10 @@ void MujocoSystemInterface::set_initial_pose()
     }
     else
     {
-      RCLCPP_WARN_EXPRESSION(
-          get_logger(), actuator.actuator_type != ActuatorType::PASSIVE,
-          "Actuator '%s' position state is not finite. Leaving it to the MuJoCo model's default initial position.",
-          actuator.joint_name.c_str());
+      RCLCPP_WARN_EXPRESSION(get_logger(), actuator.actuator_type != ActuatorType::PASSIVE,
+                             "Actuator '%s' position state is not finite. Leaving it to the MuJoCo model's default "
+                             "initial position.",
+                             actuator.joint_name.c_str());
     }
     if (actuator.is_position_control_enabled)
     {
