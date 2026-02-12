@@ -28,9 +28,14 @@
   </asset>
   <worldbody>
     <body name="base" pos="0 0 0.3">
-      <freejoint name="base_free_joint"/>
+      <joint name="base_x_joint" type="slide" axis="1 0 0" damping="0.1"/>
+      <!-- <joint name="base_y_joint" type="slide" axis="0 1 0" damping="0.1"/>
+      <joint name="base_z_joint" type="slide" axis="0 0 0" damping="0.1"/> -->
+      <!-- <joint name="base_free_joint" type="free"/> -->
+
+      <joint name="base_pitch_joint" type="hinge" axis="0 1 0" damping="0.1"/>
       <site name="imu" type="box" size="0.002 0.002 0.002" rgba="1 1 0 1"/>
-      <geom type="mesh" rgba="1 1 1 1" mesh="base_link" class="untouch" mass="8.4"/>
+      <geom type="mesh" rgba="1 1 1 1" mesh="base_link" class="untouch" mass="10"/>
     
     <body name="Left_front_link" pos="-0.0193914 -0.1837 -0.05">
       <inertial pos="0.032009 -0.002932 -0.003563" quat="0.472786 0.528055 0.525808 0.470275" mass="0.7" diaginertia="0.000152893 0.000125485 2.9469e-05" />
@@ -158,7 +163,9 @@
     <accelerometer name="imu_accel" site="imu" />
   </sensor>
   <keyframe>
-    <key name="home" qpos="0 0 0.3 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0" />
+    <key name="home" qpos="0 0 0 0 0 0 0 0 0 0 0 0 0 0" />
+    <!-- <key name="home" qpos="0 0 0.3 1 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0" /> -->
+
   </keyframe>
 </mujoco>
 

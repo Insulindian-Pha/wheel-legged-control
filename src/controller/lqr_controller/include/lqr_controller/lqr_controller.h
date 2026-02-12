@@ -134,15 +134,45 @@ protected:
   static double quaternion_to_pitch(double x, double y, double z, double w);
   static double quaternion_to_yaw(double x, double y, double z, double w);
 
+  // Structure to hold state output contributions
+  struct StateOutputContributions {
+    // Left wheel contributions
+    double left_wheel_s_output;
+    double left_wheel_fai_output;
+    double left_wheel_theta_ll_output;
+    double left_wheel_theta_lr_output;
+    double left_wheel_theta_b_output;
+    // Right wheel contributions
+    double right_wheel_s_output;
+    double right_wheel_fai_output;
+    double right_wheel_theta_ll_output;
+    double right_wheel_theta_lr_output;
+    double right_wheel_theta_b_output;
+    // Left leg contributions
+    double left_leg_s_output;
+    double left_leg_fai_output;
+    double left_leg_theta_ll_output;
+    double left_leg_theta_lr_output;
+    double left_leg_theta_b_output;
+    // Right leg contributions
+    double right_leg_s_output;
+    double right_leg_fai_output;
+    double right_leg_theta_ll_output;
+    double right_leg_theta_lr_output;
+    double right_leg_theta_b_output;
+  };
+
   // Helper functions
   void calculate_lqr_control(double &wheel_torque_left,
                              double &wheel_torque_right, double &tp_left,
-                             double &tp_right);
+                             double &tp_right,
+                             StateOutputContributions &output_contributions);
   void update_state_estimation(double dt);
   void publish_force_command(double left_F0, double left_Tp, double right_F0,
                              double right_Tp);
   void publish_lqr_state(double wheel_torque_left, double wheel_torque_right,
-                         double tp_left, double tp_right);
+                         double tp_left, double tp_right,
+                         const StateOutputContributions &output_contributions);
 
   // Utility function to normalize angle to [-π, π]
   static double normalize_angle(double angle);

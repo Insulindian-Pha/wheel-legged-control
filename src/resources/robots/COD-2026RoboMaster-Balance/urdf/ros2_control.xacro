@@ -13,8 +13,8 @@
                 <param name="mujoco_model">$(arg mujoco_model)</param>
                 <param name="sim_speed_factor">1.0</param>
                 <!-- Optional: Set window resolution. If not set or set to 0, uses primary monitor resolution -->
-                <param name="window_width">1280</param> 
-                <param name="window_height">720</param> 
+                <param name="window_width">2560</param> 
+                <param name="window_height">1440</param> 
             </hardware>
             <joint name="Left_front_joint">
                 <command_interface name="effort" />
