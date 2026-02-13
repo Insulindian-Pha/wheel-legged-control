@@ -113,6 +113,13 @@ protected:
   // Applied to state values before multiplying with gains
   std::array<double, 10> state_polarity_;
 
+  // 增益极性：每个输出、每个状态分量单独配置 (1.0 保持, -1.0 取反)
+  // 实际参与计算为 gain[i] * gain_polarity[i]，便于保留原始 K 值仅用极性调符号
+  std::array<double, 10> left_wheel_gain_polarity_;
+  std::array<double, 10> right_wheel_gain_polarity_;
+  std::array<double, 10> left_leg_gain_polarity_;
+  std::array<double, 10> right_leg_gain_polarity_;
+
   // State estimation (simple integration from wheel velocity)
   double x_position_; // Current position (m) - corresponds to 's' in LQR
   double x_velocity_; // Current velocity (m/s) - corresponds to 'dot_s' in LQR
