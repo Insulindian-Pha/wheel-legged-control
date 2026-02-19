@@ -33,7 +33,7 @@ vmc_controller:
     force_command_topic: "/vmc_controller/force_command"
 
     # 控制参数
-    max_torque: 90.0 # 最大力矩限制 (Nm)
+    max_torque: 20.0 # 最大力矩限制 (Nm)
 
     # VMC杆长参数 (单位: m)
     l1: 0.216280
@@ -67,8 +67,8 @@ vmc_controller:
     pitch_invert_sign: 1.0
 
     # 期望的默认L0
-    left_desired_l0: 0.15
-    right_desired_l0: 0.15
+    left_desired_l0: 0.0
+    right_desired_l0: 0.0
 
     enable_anti_split: false
 
@@ -77,32 +77,32 @@ vmc_controller:
       l0_control:
         # 左腿pid
         left_leg:
-          target: 0.20
-          kp: -100.0
-          ki: 0.0
-          kd: -10.0
-          u_clamp_max: 50.0
-          u_clamp_min: -50.0
-          i_clamp_max: 5.0
+          target: 0.25
+          kp: -1000.0
+          ki: -0.0
+          kd: -100.0
+          u_clamp_max: 200.0
+          u_clamp_min: -200.0
+          i_clamp_max: 0.0
           i_separation_threshold: 0.0
         # 右腿pid
         right_leg:
-          target: 0.20
-          kp: 100.0
+          target: 0.25
+          kp: 1000.0
           ki: 0.0
-          kd: 10.0
-          u_clamp_max: 50.0
-          u_clamp_min: -50.0
-          i_clamp_max: 5.0
+          kd: 100.0
+          u_clamp_max: 200.0
+          u_clamp_min: -200.0
+          i_clamp_max: 0.0
           i_separation_threshold: 0.0
       theta_control:
         left_leg:
           target: 0.0 # 期望的theta值（弧度）
           kp: -10.0
-          ki: 0.0
+          ki: 0.5
           kd: -5.0
-          u_clamp_max: 50.0
-          u_clamp_min: -50.0
+          u_clamp_max: 100.0
+          u_clamp_min: -100.0
           i_clamp_max: 5.0
           i_separation_threshold: 0.0
         right_leg:
@@ -110,8 +110,8 @@ vmc_controller:
           kp: -10.0
           ki: 0.0
           kd: -5.0
-          u_clamp_max: 50.0
-          u_clamp_min: -50.0
+          u_clamp_max: 100.0
+          u_clamp_min: -100.0
           i_clamp_max: 5.0
           i_separation_threshold: 0.0
       # 防劈岔补偿：使左右腿 theta 之和趋于 0（仿 chassisR_task Tp_Pid）
@@ -139,11 +139,13 @@ lqr_controller:
 
     # 物理参数
     wheel_radius: 0.06 # 轮半径 (m)
-    max_wheel_torque: 100.0 # 最大轮毂电机力矩 (Nm)
+    max_wheel_torque: 5.0 # 最大轮毂电机力矩 (Nm)
 
-    # 期望值
-    x_set: 0.0 # 期望位置 (m)
-    v_set: 0.0 # 期望速度 (m/s)
+    # 期望最大速度（ly 为 ±1 时对应 ±v_max）；lx 为转向角速度，yaw_set_raw_ += yaw_cmd_*dt，yaw_cmd_ = lx * yaw_max_
+    v_max: 2.0 # 期望最大线速度 (m/s)
+    yaw_max: 2.0 # 最大航向角速度 (rad/s)，lx 为 ±1 时对应 ±yaw_max
+    # TD 微分跟踪器：对期望位置与期望 yaw 做速度规划再给 LQR，r 越大跟踪越快
+    td_r: 30.0 # TD 跟踪因子 (约 2*pi*Hz)，越大则规划出的速度变化越快
 
     # LQR K 矩阵配置 (4x10 = 40个值)
     # 状态向量 (10个状态):
@@ -159,49 +161,49 @@ lqr_controller:
     # 9: dot_theta_b (身体角速度)
 
     left_wheel_lqr_gains:
-      0: -1.5811 # s (位移) -> 左轮力矩
-      1: -2.9232 # dot_s (速度) -> 左轮力矩
-      2: 0.5100 # fai (航向角) -> 左轮力矩
-      3: 0.2541 # dot_fai (航向角速度) -> 左轮力矩
-      4: -17.2900 # theta_ll (左腿角度) -> 左轮力矩
-      5: -1.5162 # dot_theta_ll (左腿角速度) -> 左轮力矩
-      6: -0.1493 # theta_lr (右腿角度) -> 左轮力矩
-      7: -0.3646 # dot_theta_lr (右腿角速度) -> 左轮力矩
-      8: -0.0037 # theta_b (身体角度) -> 左轮力矩
-      9: -0.0013 # dot_theta_b (身体角速度) -> 左轮力矩
+      0: -2.2361 # s (位移) -> 左轮力矩
+      1: -3.0143 # dot_s (速度) -> 左轮力矩
+      2: 0.7925 # fai (航向角) -> 左轮力矩
+      3: 0.5048 # dot_fai (航向角速度) -> 左轮力矩
+      4: -14.3305 # theta_ll (左腿角度) -> 左轮力矩
+      5: -1.8530 # dot_theta_ll (左腿角速度) -> 左轮力矩
+      6: 0.0081 # theta_lr (右腿角度) -> 左轮力矩
+      7: -0.3445 # dot_theta_lr (右腿角速度) -> 左轮力矩
+      8: -0.0104 # theta_b (身体角度) -> 左轮力矩
+      9: -0.0016 # dot_theta_b (身体角速度) -> 左轮力矩
     right_wheel_lqr_gains:
-      0: -1.5811 # s (位移) -> 右轮力矩
-      1: -2.9232 # dot_s (速度) -> 右轮力矩
-      2: -0.5100 # fai (航向角) -> 右轮力矩
-      3: -0.2541 # dot_fai (航向角速度) -> 右轮力矩
-      4: -0.1493 # theta_ll (左腿角度) -> 右轮力矩
-      5: -0.3646 # dot_theta_ll (左腿角速度) -> 右轮力矩
-      6: -17.2900 # theta_lr (右腿角度) -> 右轮力矩
-      7: -1.5162 # dot_theta_lr (右腿角速度) -> 右轮力矩
-      8: -0.0037 # theta_b (身体角度) -> 右轮力矩
-      9: -0.0013 # dot_theta_b (身体角速度) -> 右轮力矩
+      0: -2.2361 # s (位移) -> 右轮力矩
+      1: -3.0143 # dot_s (速度) -> 右轮力矩
+      2: -0.7925 # fai (航向角) -> 右轮力矩
+      3: -0.5048 # dot_fai (航向角速度) -> 右轮力矩
+      4: 0.0081 # theta_ll (左腿角度) -> 右轮力矩
+      5: -0.3445 # dot_theta_ll (左腿角速度) -> 右轮力矩
+      6: -14.3305 # theta_lr (右腿角度) -> 右轮力矩
+      7: -1.8530 # dot_theta_lr (右腿角速度) -> 右轮力矩
+      8: -0.0104 # theta_b (身体角度) -> 右轮力矩
+      9: -0.0016 # dot_theta_b (身体角速度) -> 右轮力矩
     left_leg_lqr_gains:
-      0: 0.0008 # s (位移) -> 左腿力矩
-      1: 0.0015 # dot_s (速度) -> 左腿力矩
-      2: -4.9739 # fai (航向角) -> 左腿力矩
-      3: -1.2680 # dot_fai (航向角速度) -> 左腿力矩
-      4: 6.1405 # theta_ll (左腿角度) -> 左腿力矩
-      5: 0.1552 # dot_theta_ll (左腿角速度) -> 左腿力矩
-      6: -6.1338 # theta_lr (右腿角度) -> 左腿力矩
-      7: -0.1543 # dot_theta_lr (右腿角速度) -> 左腿力矩
-      8: -7.0711 # theta_b (身体角度) -> 左腿力矩
-      9: -2.2363 # dot_theta_b (身体角速度) -> 左腿力矩
+      0: 0.0006 # s (位移) -> 左腿力矩
+      1: 0.0008 # dot_s (速度) -> 左腿力矩
+      2: -9.9685 # fai (航向角) -> 左腿力矩
+      3: -5.2072 # dot_fai (航向角速度) -> 左腿力矩
+      4: 6.4473 # theta_ll (左腿角度) -> 左腿力矩
+      5: 0.0056 # dot_theta_ll (左腿角速度) -> 左腿力矩
+      6: -6.4446 # theta_lr (右腿角度) -> 左腿力矩
+      7: -0.0051 # dot_theta_lr (右腿角速度) -> 左腿力矩
+      8: -38.7298 # theta_b (身体角度) -> 左腿力矩
+      9: -5.0005 # dot_theta_b (身体角速度) -> 左腿力矩
     right_leg_lqr_gains:
-      0: 0.0008 # s (位移) -> 右腿力矩
-      1: 0.0015 # dot_s (速度) -> 右腿力矩
-      2: 4.9739 # fai (航向角) -> 右腿力矩
-      3: 1.2680 # dot_fai (航向角速度) -> 右腿力矩
-      4: -6.1338 # theta_ll (左腿角度) -> 右腿力矩
-      5: -0.1543 # dot_theta_ll (左腿角速度) -> 右腿力矩
-      6: 6.1405 # theta_lr (右腿角度) -> 右腿力矩
-      7: 0.1552 # dot_theta_lr (右腿角速度) -> 右腿力矩
-      8: -7.0711 # theta_b (身体角度) -> 右腿力矩
-      9: -2.2363 # dot_theta_b (身体角速度) -> 右腿力矩
+      0: 0.0006 # s (位移) -> 右腿力矩
+      1: 0.0008 # dot_s (速度) -> 右腿力矩
+      2: 9.9685 # fai (航向角) -> 右腿力矩
+      3: 5.2072 # dot_fai (航向角速度) -> 右腿力矩
+      4: -6.4446 # theta_ll (左腿角度) -> 右腿力矩
+      5: -0.0051 # dot_theta_ll (左腿角速度) -> 右腿力矩
+      6: 6.4473 # theta_lr (右腿角度) -> 右腿力矩
+      7: 0.0056 # dot_theta_lr (右腿角速度) -> 右腿力矩
+      8: -38.7298 # theta_b (身体角度) -> 右腿力矩
+      9: -5.0005 # dot_theta_b (身体角速度) -> 右腿力矩
 
     # 增益极性：每路输出、每个状态分量单独配置 (1.0 保持, -1.0 取反)，实际计算 = gain[i]*gain_polarity[i]
     left_wheel_gain_polarity:

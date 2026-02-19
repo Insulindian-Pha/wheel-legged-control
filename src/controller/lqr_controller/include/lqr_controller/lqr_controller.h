@@ -11,6 +11,7 @@
 #include <string>
 #include <vector>
 
+#include "control_input_msgs/msg/inputs.hpp"
 #include "controller_interface/controller_interface.hpp"
 #include "hardware_interface/types/hardware_interface_type_values.hpp"
 #include "lqr_controller/msg/lqr_state.hpp"
@@ -20,6 +21,8 @@
 #include "sensor_msgs/msg/imu.hpp"
 #include "std_msgs/msg/float64_multi_array.hpp"
 #include "vmc_controller/msg/vmc_state.hpp"
+
+#include "td_quadratic.hpp"
 
 namespace lqr_controller {
 
@@ -77,6 +80,11 @@ protected:
   bool use_imu_for_state_; // true when imu_topic_ is non-empty
   bool received_imu_;      // true after first IMU message received
 
+  // Control input subscription: ly -> v_set, lx -> dot_fai_set
+  rclcpp::Subscription<control_input_msgs::msg::Inputs>::SharedPtr
+      control_input_subscription_;
+  std::string control_input_topic_;
+
   // Force command publisher (for Tp updates)
   rclcpp::Publisher<std_msgs::msg::Float64MultiArray>::SharedPtr
       force_command_publisher_;
@@ -123,19 +131,39 @@ protected:
   // State estimation (simple integration from wheel velocity)
   double x_position_; // Current position (m) - corresponds to 's' in LQR
   double x_velocity_; // Current velocity (m/s) - corresponds to 'dot_s' in LQR
-  double x_set_;      // Desired position (m)
-  double v_set_;      // Desired velocity (m/s)
-  double yaw_;        // Yaw angle (rad) - corresponds to 'fai' in LQR
-  double yaw_gyro_;   // Yaw angular velocity (rad/s) - corresponds to 'dot_fai'
-                      // in LQR
+  // Raw command from control_input (ly -> v_cmd_; lx -> yaw_cmd_ = lx * yaw_max_)
+  double v_cmd_;       // Desired velocity command (m/s)
+  double yaw_cmd_;     // Desired yaw rate command (rad/s) = lx * yaw_max_
+  // Raw setpoints: position integrated from v_cmd_; yaw integrated from yaw_cmd_
+  double x_set_raw_;   // Integrated position target (m)
+  double yaw_set_raw_; // Integrated yaw target (rad), yaw_set_raw_ += yaw_cmd_ * dt
+  // AddCaclu-style unwrap: last_yaw_ (rad), unwrapped_yaw_ (rad) for angle normalization
+  double last_yaw_;      // Last wrapped yaw (rad) for delta computation
+  double unwrapped_yaw_; // Cumulative unwrapped yaw (rad)
+  // TD output: planned setpoints fed to LQR (velocity-planned)
+  double x_set_;       // Desired position (m), from TD getX1
+  double v_set_;       // Desired velocity (m/s), from TD getX2 (position TD)
+  double fai_set_;     // Desired yaw (rad), from TD getX1 (yaw TD)
+  double dot_fai_set_; // Desired yaw rate (rad/s), from TD getX2 (yaw TD)
+  double yaw_;         // Yaw angle (rad) - corresponds to 'fai' in LQR
+  double yaw_gyro_;    // Yaw angular velocity (rad/s) - corresponds to 'dot_fai'
+                       // in LQR
 
-  // Parameters
+  // TD tracking differentiators for velocity planning (position and yaw)
+  common::TDquadratic td_position_;
+  common::TDquadratic td_yaw_;
+
+  // Parameters (from config; v_max, yaw_max for control_input)
   double wheel_radius_;     // Wheel radius for velocity calculation (m)
   double max_wheel_torque_; // Maximum wheel torque (Nm)
+  double v_max_;    // Max linear velocity (m/s), ly in [-1,1] -> v_cmd
+  double yaw_max_;  // Max yaw rate (rad/s), lx in [-1,1] -> yaw_cmd = lx * yaw_max_
+  double td_r_;     // TD tracking factor r (larger = faster), configurable
 
   // Callbacks
   void vmc_state_callback(const vmc_controller::msg::VMCState::SharedPtr msg);
   void imu_callback(const sensor_msgs::msg::Imu::SharedPtr msg);
+  void control_input_callback(const control_input_msgs::msg::Inputs::SharedPtr msg);
 
   // Extract pitch [rad] and yaw [rad] from IMU quaternion (x,y,z,w)
   static double quaternion_to_pitch(double x, double y, double z, double w);

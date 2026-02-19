@@ -23,6 +23,10 @@ float64 x_set                # 期望位置 (m)
 float64 v_set                # 期望速度 (m/s)
 float64 x_err                # 位置误差 (m)
 float64 v_err                # 速度误差 (m/s)
+float64 fai_set              # 期望航向角 (rad)
+float64 dot_fai_set           # 期望航向角速度 (rad/s)
+float64 fai_err               # 航向角误差 (rad)
+float64 dot_fai_err           # 航向角速度误差 (rad/s)
 
 # 轮速
 float64 left_wheel_velocity  # 左轮角速度 (rad/s)

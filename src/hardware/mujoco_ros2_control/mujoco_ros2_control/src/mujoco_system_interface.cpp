@@ -814,8 +814,8 @@ MujocoSystemInterface::on_init(const hardware_interface::HardwareComponentInterf
       glfwSetWindowSize(glfwGetCurrentContext(), window_width, window_height);
 
       // Hide UI panels programmatically
-      sim_->ui0_enable = true;  // Hide left panel
-      sim_->ui1_enable = true;  // Hide right panel
+      sim_->ui0_enable = false;  // Hide left panel
+      sim_->ui1_enable = false;  // Hide right panel
 
       // Notify sim that we are ready
       sim_ready->set_value();
@@ -1267,8 +1267,9 @@ MujocoSystemInterface::on_deactivate(const rclcpp_lifecycle::State& /*previous_s
   return hardware_interface::CallbackReturn::SUCCESS;
 }
 
-hardware_interface::return_type MujocoSystemInterface::perform_command_mode_switch(
-    const std::vector<std::string>& start_interfaces, const std::vector<std::string>& stop_interfaces)
+hardware_interface::return_type
+MujocoSystemInterface::perform_command_mode_switch(const std::vector<std::string>& start_interfaces,
+                                                   const std::vector<std::string>& stop_interfaces)
 {
   auto update_joint_interface = [this](const std::string& interface_name, bool enabled) {
     size_t delimiter_pos = interface_name.find('/');
@@ -1293,9 +1294,10 @@ hardware_interface::return_type MujocoSystemInterface::perform_command_mode_swit
 
     const auto actuator_name = get_joint_actuator_name(joint_name, get_hardware_info(), mj_model_);
 
-    auto actuator_it = std::find_if(
-        mujoco_actuator_data_.begin(), mujoco_actuator_data_.end(),
-        [&actuator_name, this](const MuJoCoActuatorData& actuator) { return actuator.joint_name == actuator_name; });
+    auto actuator_it = std::find_if(mujoco_actuator_data_.begin(), mujoco_actuator_data_.end(),
+                                    [&actuator_name, this](const MuJoCoActuatorData& actuator) {
+                                      return actuator.joint_name == actuator_name;
+                                    });
 
     if (actuator_it == mujoco_actuator_data_.end())
     {
@@ -1385,8 +1387,7 @@ hardware_interface::return_type MujocoSystemInterface::perform_command_mode_swit
   return hardware_interface::return_type::OK;
 }
 
-hardware_interface::return_type MujocoSystemInterface::read(const rclcpp::Time& time,
-                                                            const rclcpp::Duration& /*period*/)
+hardware_interface::return_type MujocoSystemInterface::read(const rclcpp::Time& time, const rclcpp::Duration& /*period*/)
 {
   // Joint states
   actuator_state_msg_.header.stamp = time;
@@ -1869,9 +1870,10 @@ void MujocoSystemInterface::register_urdf_joints(const hardware_interface::Hardw
     if (joint.parameters.find("mimic") != joint.parameters.end())
     {
       const auto mimicked_joint = joint.parameters.at("mimic");
-      const auto mimicked_joint_it = std::find_if(
-          hardware_info.joints.begin(), hardware_info.joints.end(),
-          [&mimicked_joint](const hardware_interface::ComponentInfo& info) { return info.name == mimicked_joint; });
+      const auto mimicked_joint_it = std::find_if(hardware_info.joints.begin(), hardware_info.joints.end(),
+                                                  [&mimicked_joint](const hardware_interface::ComponentInfo& info) {
+                                                    return info.name == mimicked_joint;
+                                                  });
       if (mimicked_joint_it == hardware_info.joints.end())
       {
         throw std::runtime_error(std::string("Mimicked joint '") + mimicked_joint + "' not found");
@@ -1999,8 +2001,7 @@ void MujocoSystemInterface::register_urdf_joints(const hardware_interface::Hardw
           // Direct velocity control enabled for velocity actuator
           actuator_it->is_velocity_control_enabled = true;
         }
-        else if (actuator_it->actuator_type == ActuatorType::MOTOR ||
-                 actuator_it->actuator_type == ActuatorType::CUSTOM)
+        else if (actuator_it->actuator_type == ActuatorType::MOTOR || actuator_it->actuator_type == ActuatorType::CUSTOM)
         {
           if (actuator_it->has_vel_pid)
           {
@@ -2041,8 +2042,7 @@ void MujocoSystemInterface::register_urdf_joints(const hardware_interface::Hardw
                                 actuator_name.c_str());
         if (actuator_it->actuator_type == ActuatorType::MOTOR || actuator_it->actuator_type == ActuatorType::CUSTOM)
         {
-          RCLCPP_INFO(get_logger(), "Using MuJoCo motor or custom actuator for the joint : '%s'",
-                      actuator_name.c_str());
+          RCLCPP_INFO(get_logger(), "Using MuJoCo motor or custom actuator for the joint : '%s'", actuator_name.c_str());
           // Direct effort control enabled for MOTOR or CUSTOM actuator
           actuator_it->is_effort_control_enabled = true;
         }

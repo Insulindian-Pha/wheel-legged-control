@@ -17,6 +17,7 @@ find_package(hardware_interface REQUIRED)
 find_package(pluginlib REQUIRED)
 find_package(rclcpp_lifecycle REQUIRED)
 find_package(vmc_controller REQUIRED)
+find_package(control_input_msgs REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
 
 # Generate messages
@@ -34,7 +35,9 @@ set_target_properties(lqr_controller_lib PROPERTIES OUTPUT_NAME lqr_controller)
 target_include_directories(lqr_controller_lib
         PUBLIC
         "$<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>"
-        "$<INSTALL_INTERFACE:include/${PROJECT_NAME}>")
+        "$<INSTALL_INTERFACE:include/${PROJECT_NAME}>"
+        PRIVATE
+        "${CMAKE_CURRENT_SOURCE_DIR}/../common/td_quadratic")
 
 ament_target_dependencies(
         lqr_controller_lib PUBLIC
@@ -46,6 +49,7 @@ ament_target_dependencies(
         pluginlib
         rclcpp_lifecycle
         vmc_controller
+        control_input_msgs
 )
 
 # Link message typesupport
@@ -83,6 +87,6 @@ if (BUILD_TESTING)
     ament_lint_auto_find_test_dependencies()
 endif ()
 
-ament_export_dependencies(rclcpp std_msgs sensor_msgs controller_interface hardware_interface pluginlib rclcpp_lifecycle vmc_controller rosidl_default_runtime)
+ament_export_dependencies(rclcpp std_msgs sensor_msgs controller_interface hardware_interface pluginlib rclcpp_lifecycle vmc_controller control_input_msgs rosidl_default_runtime)
 ament_package()
 

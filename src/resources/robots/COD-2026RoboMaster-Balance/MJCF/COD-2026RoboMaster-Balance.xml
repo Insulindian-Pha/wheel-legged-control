@@ -135,12 +135,13 @@
     </equality>
 
   <actuator>
-    <general name="Left_front_joint_actuator" joint="Left_front_joint" gainprm="1" ctrlrange="-3.14 3.14" />
-    <general name="Left_rear_joint_actuator" joint="Left_rear_joint" gainprm="1" ctrlrange="-3.14 3.14" />
-    <general name="Left_Wheel_joint_actuator" joint="Left_Wheel_joint" gainprm="1" />
-    <general name="Right_front_joint_actuator" joint="Right_front_joint" gainprm="1" ctrlrange="-3.14 3.14" />
-    <general name="Right_rear_joint_actuator" joint="Right_rear_joint" gainprm="1" ctrlrange="-3.14 3.14" />
-    <general name="Right_Wheel_joint_actuator" joint="Right_Wheel_joint" gainprm="1" ctrlrange="-3.14 3.14" />
+    <!-- ctrlrange 为力矩上下限 (Nm)，需大于等于控制器 max_torque，否则 /dynamic_joint_states 反馈会被钳位 -->
+    <general name="Left_front_joint_actuator" joint="Left_front_joint" gainprm="1" ctrlrange="-90 90" />
+    <general name="Left_rear_joint_actuator" joint="Left_rear_joint" gainprm="1" ctrlrange="-90 90" />
+    <general name="Left_Wheel_joint_actuator" joint="Left_Wheel_joint" gainprm="1" ctrlrange="-10 10" />
+    <general name="Right_front_joint_actuator" joint="Right_front_joint" gainprm="1" ctrlrange="-90 90" />
+    <general name="Right_rear_joint_actuator" joint="Right_rear_joint" gainprm="1" ctrlrange="-90 90" />
+    <general name="Right_Wheel_joint_actuator" joint="Right_Wheel_joint" gainprm="1" ctrlrange="-10 10" />
   </actuator>
 
   <sensor>

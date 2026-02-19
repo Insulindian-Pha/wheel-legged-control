@@ -440,8 +440,6 @@ VMCController::update(const rclcpp::Time &time,
 
   // Calculate VMC for legs (first pass to get L0 and theta)
   // Note: We need to set F0 first (use previous value or 0) to calculate theta
-  left_leg_.setF0(left_F0_);
-  right_leg_.setF0(right_F0_);
 
   // Get current L0 and theta values
   double left_current_l0 = left_leg_.getL0();
@@ -450,10 +448,9 @@ VMCController::update(const rclcpp::Time &time,
   double right_current_theta = right_leg_.getTheta();
 
   // Calculate F0 using PID with L0 as feedback
-  // left_F0_ = left_leg_l0_pid_->update(left_current_l0, time);
-  // right_F0_ = right_leg_l0_pid_->update(right_current_l0, time);
+  left_F0_ = left_leg_l0_pid_->update(left_current_l0, time);
+  right_F0_ = right_leg_l0_pid_->update(right_current_l0, time);
 
-  // Calculate Tp using PID with theta as feedback
   // left_Tp_ = left_leg_theta_pid_->update(left_current_theta, time);
   // right_Tp_ = right_leg_theta_pid_->update(right_current_theta, time);
 
@@ -470,8 +467,8 @@ VMCController::update(const rclcpp::Time &time,
   }
 
   // Set F0 and Tp
-  // left_leg_.setF0(left_F0_);
-  // right_leg_.setF0(right_F0_);
+  left_leg_.setF0(left_F0_);
+  right_leg_.setF0(right_F0_);
   left_leg_.setTp(left_Tp_);
   right_leg_.setTp(right_Tp_);
 
@@ -599,6 +596,10 @@ void VMCController::publish_vmc_state(double left_front_torque_raw,
     vmc_state_msg.left_tp = left_Tp_;
     vmc_state_msg.left_torque_front = left_front_torque_raw;
     vmc_state_msg.left_torque_rear = left_rear_torque_raw;
+    vmc_state_msg.left_j11 = left_leg_.getJ11();
+    vmc_state_msg.left_j12 = left_leg_.getJ12();
+    vmc_state_msg.left_j21 = left_leg_.getJ21();
+    vmc_state_msg.left_j22 = left_leg_.getJ22();
 
     // Right leg state
     vmc_state_msg.right_theta = right_leg_.getTheta();
@@ -608,6 +609,10 @@ void VMCController::publish_vmc_state(double left_front_torque_raw,
     vmc_state_msg.right_tp = right_Tp_;
     vmc_state_msg.right_torque_front = right_front_torque_raw;
     vmc_state_msg.right_torque_rear = right_rear_torque_raw;
+    vmc_state_msg.right_j11 = right_leg_.getJ11();
+    vmc_state_msg.right_j12 = right_leg_.getJ12();
+    vmc_state_msg.right_j21 = right_leg_.getJ21();
+    vmc_state_msg.right_j22 = right_leg_.getJ22();
 
     // IMU data
     vmc_state_msg.pitch = pitch_;

@@ -36,16 +36,16 @@ try:
     # LQR 权重矩阵 Q 的对角元素（10个状态变量）
     # Q = diag(q1, q2, q3, q4, q5, q6, q7, q8, q9, q10)
     # 对应状态：s, dot_s, fai, dot_fai, theta_ll, dot_theta_ll, theta_lr, dot_theta_lr, theta_b, dot_theta_b
-    q1 = 5   # 位移 s
+    q1 = 10   # 位移 s
     q2 = 5    # 速度 dot_s
-    q3 = 50   # 航向角 fai
-    q4 = 1    # 航向角速度 dot_fai
-    q5 = 100   # 左腿角度 theta_ll
-    q6 = 1    # 左腿角速度 dot_theta_ll
-    q7 = 100   # 右腿角度 theta_lr
-    q8 = 1    # 右腿角速度 dot_theta_lr
-    q9 = 100   # 身体角度 theta_b
-    q10 = 10   # 身体角速度 dot_theta_b
+    q3 = 10   # 航向角 fai
+    q4 = 5    # 航向角速度 dot_fai
+    q5 = 10   # 左腿角度 theta_ll
+    q6 = 3    # 左腿角速度 dot_theta_ll
+    q7 = 10   # 右腿角度 theta_lr
+    q8 = 3    # 右腿角速度 dot_theta_lr
+    q9 = 3000   # 身体角度 theta_b
+    q10 = 50   # 身体角速度 dot_theta_b
     
     # LQR 权重矩阵 R 的对角元素（4个控制输入）
     # R = diag(r1, r2, r3, r4)

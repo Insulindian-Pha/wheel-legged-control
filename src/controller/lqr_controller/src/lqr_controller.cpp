@@ -10,11 +10,14 @@
 namespace lqr_controller {
 
 LQRController::LQRController()
-    : left_theta_(0.0), left_d_theta_(0.0), right_theta_(0.0),
-      right_d_theta_(0.0), pitch_(0.0), pitch_gyro_(0.0), left_F0_(0.0),
-      right_F0_(0.0), received_imu_(false), received_vmc_state_(false),
-      x_position_(0.0), x_velocity_(0.0), x_set_(0.0), v_set_(0.0), yaw_(0.0),
-      yaw_gyro_(0.0), wheel_radius_(0.06), max_wheel_torque_(4.0) {
+    : received_imu_(false), left_theta_(0.0), left_d_theta_(0.0),
+      right_theta_(0.0), right_d_theta_(0.0), pitch_(0.0), pitch_gyro_(0.0),
+      left_F0_(0.0), right_F0_(0.0), received_vmc_state_(false),
+      x_position_(0.0), x_velocity_(0.0), v_cmd_(0.0), yaw_cmd_(0.0),
+      x_set_raw_(0.0), yaw_set_raw_(0.0), last_yaw_(0.0), unwrapped_yaw_(0.0),
+      x_set_(0.0), v_set_(0.0), fai_set_(0.0), dot_fai_set_(0.0), yaw_(0.0),
+      yaw_gyro_(0.0), wheel_radius_(0.06), max_wheel_torque_(4.0), v_max_(1.0),
+      yaw_max_(1.0), td_r_(300.0) {
   // Initialize LQR gains to zero
   left_wheel_lqr_gains_.fill(0.0);
   right_wheel_lqr_gains_.fill(0.0);
@@ -42,8 +45,10 @@ controller_interface::CallbackReturn LQRController::on_init() {
     auto_declare<std::string>("lqr_state_topic", "/lqr_controller/lqr_state");
     auto_declare<double>("wheel_radius", 0.06);
     auto_declare<double>("max_wheel_torque", 4.0);
-    auto_declare<double>("x_set", 0.0);
-    auto_declare<double>("v_set", 0.0);
+    auto_declare<std::string>("control_input_topic", "/control_input");
+    auto_declare<double>("v_max", 1.0);
+    auto_declare<double>("yaw_max", 1.0);
+    auto_declare<double>("td_r", 300.0);
 
     // Declare LQR gains for left wheel torque (10 values)
     for (int i = 0; i < 10; ++i) {
@@ -107,8 +112,13 @@ controller_interface::CallbackReturn LQRController::on_configure(
   lqr_state_topic_ = get_node()->get_parameter("lqr_state_topic").as_string();
   wheel_radius_ = get_node()->get_parameter("wheel_radius").as_double();
   max_wheel_torque_ = get_node()->get_parameter("max_wheel_torque").as_double();
-  x_set_ = get_node()->get_parameter("x_set").as_double();
-  v_set_ = get_node()->get_parameter("v_set").as_double();
+  control_input_topic_ =
+      get_node()->get_parameter("control_input_topic").as_string();
+  v_max_ = get_node()->get_parameter("v_max").as_double();
+  yaw_max_ = get_node()->get_parameter("yaw_max").as_double();
+  td_r_ = get_node()->get_parameter("td_r").as_double();
+  td_position_.setR(static_cast<float>(td_r_));
+  td_yaw_.setR(static_cast<float>(td_r_));
 
   // Get LQR gains for left wheel torque
   for (int i = 0; i < 10; ++i) {
@@ -198,9 +208,18 @@ controller_interface::CallbackReturn LQRController::on_configure(
       get_node()->create_publisher<lqr_controller::msg::LQRState>(
           lqr_state_topic_, 10);
 
+  // Create subscription for control_input (ly -> v_set, lx -> dot_fai_set)
+  control_input_subscription_ =
+      get_node()->create_subscription<control_input_msgs::msg::Inputs>(
+          control_input_topic_, 10,
+          std::bind(&LQRController::control_input_callback, this,
+                    std::placeholders::_1));
+
   RCLCPP_INFO(get_node()->get_logger(), "LQR Controller configured");
   RCLCPP_INFO(get_node()->get_logger(), "Subscribing to VMC state: %s",
               vmc_state_topic_.c_str());
+  RCLCPP_INFO(get_node()->get_logger(), "Subscribing to control_input: %s",
+              control_input_topic_.c_str());
   RCLCPP_INFO(get_node()->get_logger(), "Publishing force commands to: %s",
               force_command_topic_.c_str());
   RCLCPP_INFO(get_node()->get_logger(), "Publishing LQR state to: %s",
@@ -208,8 +227,9 @@ controller_interface::CallbackReturn LQRController::on_configure(
   RCLCPP_INFO(get_node()->get_logger(), "Wheel radius: %.3f m", wheel_radius_);
   RCLCPP_INFO(get_node()->get_logger(), "Max wheel torque: %.2f Nm",
               max_wheel_torque_);
-  RCLCPP_INFO(get_node()->get_logger(), "x_set: %.3f m, v_set: %.3f m/s",
-              x_set_, v_set_);
+  RCLCPP_INFO(get_node()->get_logger(),
+              "v_max: %.3f m/s, yaw_max: %.3f rad/s, td_r: %.1f", v_max_,
+              yaw_max_, td_r_);
 
   return controller_interface::CallbackReturn::SUCCESS;
 }
@@ -283,9 +303,21 @@ LQRController::on_activate(const rclcpp_lifecycle::State & /*previous_state*/) {
     return controller_interface::CallbackReturn::ERROR;
   }
 
-  // Reset state estimation
+  // Reset state estimation, raw targets and TD setpoints
   x_position_ = 0.0;
   x_velocity_ = 0.0;
+  v_cmd_ = 0.0;
+  yaw_cmd_ = 0.0;
+  x_set_raw_ = 0.0;
+  yaw_set_raw_ = 0.0;
+  last_yaw_ = yaw_;
+  unwrapped_yaw_ = yaw_;
+  td_position_.reset();
+  td_yaw_.reset();
+  x_set_ = 0.0;
+  v_set_ = 0.0;
+  fai_set_ = 0.0;
+  dot_fai_set_ = 0.0;
   yaw_ = 0.0;
   yaw_gyro_ = 0.0;
 
@@ -328,6 +360,24 @@ LQRController::update(const rclcpp::Time & /*time*/,
 
   // Update state estimation (simple integration)
   update_state_estimation(dt);
+
+  // Raw targets: position and yaw from integration (yaw_set_raw_ += yaw_cmd_ * dt)
+  x_set_raw_ += v_cmd_ * dt;
+  yaw_set_raw_ += yaw_cmd_ * dt;
+
+  // AddCaclu-style: update unwrapped yaw from wrapped yaw_ for consistent angle handling
+  normalize_angle(yaw_);
+
+  // TD velocity planning: raw target -> planned position + velocity for LQR
+  td_position_.setH(static_cast<float>(dt));
+  td_position_.Calc(static_cast<float>(x_set_raw_));
+  x_set_ = static_cast<double>(td_position_.getX1());
+  v_set_ = static_cast<double>(td_position_.getX2());
+
+  td_yaw_.setH(static_cast<float>(dt));
+  td_yaw_.Calc(static_cast<float>(yaw_set_raw_));
+  fai_set_ = static_cast<double>(td_yaw_.getX1());
+  dot_fai_set_ = static_cast<double>(td_yaw_.getX2());
 
   // Calculate LQR control
   double wheel_torque_left = 0.0;
@@ -387,6 +437,13 @@ void LQRController::imu_callback(const sensor_msgs::msg::Imu::SharedPtr msg) {
   yaw_gyro_ = msg->angular_velocity.z;
 }
 
+void LQRController::control_input_callback(
+    const control_input_msgs::msg::Inputs::SharedPtr msg) {
+  // ly -> v_cmd; lx -> yaw_cmd = lx * yaw_max_ (rad/s)
+  v_cmd_ = static_cast<double>(msg->ly) * v_max_;
+  yaw_cmd_ = static_cast<double>(msg->lx) * yaw_max_;
+}
+
 double LQRController::quaternion_to_pitch(double x, double y, double z,
                                           double w) {
   double sinp = 2 * (w * y - z * x);
@@ -417,11 +474,11 @@ void LQRController::calculate_lqr_control(
   // 8: theta_b (身体角度) - pitch_
   // 9: dot_theta_b (身体角速度) - pitch_gyro_
 
-  // Apply state polarity to each state value
-  double s = state_polarity_[0] * x_position_;
-  double dot_s = state_polarity_[1] * x_velocity_;
-  double fai = state_polarity_[2] * yaw_;
-  double dot_fai = state_polarity_[3] * yaw_gyro_;
+  // Apply state polarity to setpoint errors (first 4 states)
+  double s = state_polarity_[0] * (x_position_ - x_set_);
+  double dot_s = state_polarity_[1] * (x_velocity_ - v_set_);
+  double fai = state_polarity_[2] * normalize_angle(yaw_ - fai_set_);
+  double dot_fai = state_polarity_[3] * (yaw_gyro_ - dot_fai_set_);
   double theta_ll = state_polarity_[4] * left_theta_;
   double dot_theta_ll = state_polarity_[5] * left_d_theta_;
   double theta_lr = state_polarity_[6] * right_theta_;
@@ -587,6 +644,10 @@ void LQRController::publish_lqr_state(
     msg.v_set = v_set_;
     msg.x_err = x_set_ - x_position_;
     msg.v_err = v_set_ - x_velocity_;
+    msg.fai_set = fai_set_;
+    msg.dot_fai_set = dot_fai_set_;
+    msg.fai_err = normalize_angle(yaw_ - fai_set_);
+    msg.dot_fai_err = yaw_gyro_ - dot_fai_set_;
 
     // Wheel velocities
     if (!left_wheel_state_.empty() && !right_wheel_state_.empty()) {
@@ -670,14 +731,16 @@ LQRController::state_interface_configuration() const {
 }
 
 double LQRController::normalize_angle(double angle) {
-  // Normalize angle to [-π, π] range using fmod for efficiency
-  angle = std::fmod(angle, 2.0 * M_PI);
-  if (angle > M_PI) {
-    angle -= 2.0 * M_PI;
-  } else if (angle < -M_PI) {
-    angle += 2.0 * M_PI;
+  // AddCaclu-style: normalize to [-π, π] (same branch logic as update_unwrapped_yaw)
+  const double two_pi = 2.0 * M_PI;
+  double delta = std::fmod(angle, two_pi);
+  if (delta < -M_PI) {
+    return delta + two_pi;
   }
-  return angle;
+  if (delta > M_PI) {
+    return delta - two_pi;
+  }
+  return delta;
 }
 
 } // namespace lqr_controller
