@@ -99,6 +99,10 @@ protected:
   double left_desired_theta_;
   double right_desired_theta_;
 
+  // VMC reference topic (from rl_controller: [left_desired_theta, left_desired_l0, right_desired_theta, right_desired_l0])
+  std::string vmc_reference_topic_;
+  bool received_vmc_reference_;
+
   // Parameters
   std::string imu_topic_;
   std::string force_command_topic_;
@@ -123,9 +127,10 @@ protected:
   // Pitch axis polarity (used to invert pitch and pitch_gyro if needed)
   double pitch_invert_sign_;
 
-  // Subscriptions (for IMU and force commands)
+  // Subscriptions (for IMU, force commands, and VMC reference from rl_controller)
   rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr imu_subscription_;
   rclcpp::Subscription<std_msgs::msg::Float64MultiArray>::SharedPtr force_command_subscription_;
+  rclcpp::Subscription<std_msgs::msg::Float64MultiArray>::SharedPtr vmc_reference_subscription_;
 
   // Publisher (for VMC state)
   rclcpp::Publisher<vmc_controller::msg::VMCState>::SharedPtr vmc_state_publisher_;
@@ -133,6 +138,7 @@ protected:
   // Callbacks
   void imu_callback(const sensor_msgs::msg::Imu::SharedPtr msg);
   void force_command_callback(const std_msgs::msg::Float64MultiArray::SharedPtr msg);
+  void vmc_reference_callback(const std_msgs::msg::Float64MultiArray::SharedPtr msg);
   double quaternion_to_pitch(double x, double y, double z, double w);
   void extract_pitch_from_imu(const sensor_msgs::msg::Imu::SharedPtr msg, double& pitch, double& pitch_gyro);
 

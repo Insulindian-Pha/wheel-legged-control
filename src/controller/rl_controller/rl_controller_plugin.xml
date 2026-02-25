@@ -1,0 +1,8 @@
+<?xml version="1.0"?>
+<library path="rl_controller">
+  <class name="rl_controller/RLController" type="rl_controller::RLController" base_class_type="controller_interface::ControllerInterface">
+    <description>
+      RL Controller: ONNX policy (cod_flat_vmc) deployment; publishes VMC reference and commands wheel effort.
+    </description>
+  </class>
+</library>

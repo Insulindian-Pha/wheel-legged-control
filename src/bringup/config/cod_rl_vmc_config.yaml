@@ -1,0 +1,178 @@
+# RL + VMC: ONNX policy (cod_flat_vmc) with vmc_controller for legs.
+# Use this config when spawning vmc_controller + rl_controller (instead of lqr_controller).
+# Ensure policy_path points to the exported policy.onnx (e.g. LeggedLab .../exported/policy.onnx or copy to src/resources/policy/).
+
+controller_manager:
+  ros__parameters:
+    update_rate: 500
+
+    joint_state_broadcaster:
+      type: joint_state_broadcaster/JointStateBroadcaster
+
+    imu_broadcaster:
+      type: imu_sensor_broadcaster/IMUSensorBroadcaster
+
+    vmc_controller:
+      type: vmc_controller/VMCController
+
+    rl_controller:
+      type: rl_controller/RLController
+
+imu_broadcaster:
+  ros__parameters:
+    sensor_name: "imu_sensor"
+    topic_name: "/imu/data"
+    frame_id: "base_link"
+
+vmc_controller:
+  ros__parameters:
+    left_front_joint_name: "Left_front_joint"
+    left_rear_joint_name: "Left_rear_joint"
+    right_front_joint_name: "Right_front_joint"
+    right_rear_joint_name: "Right_rear_joint"
+
+    imu_topic: "/imu_broadcaster/imu"
+    force_command_topic: "/vmc_controller/force_command"
+    vmc_reference_topic: "/vmc_controller/reference"
+
+    max_torque: 20.0
+
+    l1: 0.216280
+    l2: 0.255184
+    l3: 0.255184
+    l4: 0.216280
+    l5: 0.0
+
+    left_F0: 0.0
+    left_Tp: 0.0
+    right_F0: 0.0
+    right_Tp: 0.0
+
+    left_front_joint_offset: 0.15
+    left_rear_joint_offset: 0.0
+    right_front_joint_offset: -0.112
+    right_rear_joint_offset: 0.0
+
+    left_front_joint_invert_sign: 1.0
+    left_rear_joint_invert_sign: -1.0
+    right_front_joint_invert_sign: 1.0
+    right_rear_joint_invert_sign: -1.0
+    pitch_invert_sign: -1.0
+
+    left_desired_l0: 0.2
+    right_desired_l0: 0.2
+    left_desired_theta: 0.0
+    right_desired_theta: 0.0
+
+    enable_anti_split: false
+
+    pid_gains:
+      l0_control:
+        left_leg:
+          target: 0.2
+          kp: -1000.0
+          ki: 0.0
+          kd: -100.0
+          u_clamp_max: 20.0
+          u_clamp_min: -20.0
+          i_clamp_max: 0.0
+          i_separation_threshold: 0.0
+        right_leg:
+          target: 0.2
+          kp: 1000.0
+          ki: 0.0
+          kd: 100.0
+          u_clamp_max: 20.0
+          u_clamp_min: -20.0
+          i_clamp_max: 0.0
+          i_separation_threshold: 0.0
+      theta_control:
+        left_leg:
+          target: 0.0
+          kp: -1000.0
+          ki: 0.5
+          kd: -100.0
+          u_clamp_max: 20.0
+          u_clamp_min: -20.0
+          i_clamp_max: 5.0
+          i_separation_threshold: 0.0
+        right_leg:
+          target: 0.0
+          kp: -1000.0
+          ki: 0.0
+          kd: -100.0
+          u_clamp_max: 100.0
+          u_clamp_min: -100.0
+          i_clamp_max: 5.0
+          i_separation_threshold: 0.0
+      anti_split:
+        target: 0.0
+        kp: -100.0
+        ki: 0.0
+        kd: -30.0
+        u_clamp_max: 10.0
+        u_clamp_min: -10.0
+        i_clamp_max: 0.0
+        i_separation_threshold: 0.0
+
+rl_controller:
+  ros__parameters:
+    # Path to ONNX policy (cod_flat_vmc). Set to absolute path or copy model to workspace.
+    policy_path: "/home/kyx/code/wheel-legged-control/src/resources/policy/walk.onnx" # e.g. "/path/to/wheel-legged-control/src/resources/policy/walk.onnx"
+
+    left_wheel_joint_name: "Left_Wheel_joint"
+    right_wheel_joint_name: "Right_Wheel_joint"
+
+    vmc_state_topic: "/vmc_controller/vmc_state"
+    imu_topic: "/imu_broadcaster/imu"
+    control_input_topic: "/control_input"
+    vmc_reference_topic: "/vmc_controller/reference"
+    rl_state_topic: "/rl_controller/rl_state" # debug topic
+
+    # ========== 观测缩放 (Obs scales) ==========
+    # 须与训练时 LeggedLab cod_flat_vmc 的 normalization.obs_scales 一致，否则策略输入分布错乱。
+    # 一般不要改；若换了训练配置，请与 LeggedLab 里对应 env 的 obs_scales 对齐。
+    obs_scale_ang_vel: 0.2 # 角速度 [rad/s] -> 网络输入
+    obs_scale_projected_gravity: 0.05 # 投影重力 (body 系)
+    obs_scale_commands: 1.0 # 线速度/角速度指令
+    obs_scale_joint_pos: 0.01 # 腿关节 theta、轮子位置
+    obs_scale_joint_vel: 1.5 # 腿关节 theta_dot、轮子速度
+    obs_scale_l0: 5.0 # 虚拟腿长 L0 [m]
+    obs_scale_l0_dot: 0.25 # L0 变化率
+    obs_scale_actions: 1.0 # 上一步动作（历史观测）
+
+    # ========== 动作缩放 (Action scaling) ==========
+    # 须与训练时 cod_vmc_env 的 action_scale_*、l0_offset 一致。
+    # 网络输出为约 [-1,1]，乘 scale 后得到物理量。
+    action_scale_theta: 0.5 # 左/右 theta 增量 [rad]
+    action_scale_l0: 0.1 # 左/右 L0 增量 [m]
+    l0_offset: 0.175 # L0 基准 [m]，与训练默认站姿一致
+    action_scale_vel: 0.0 # 轮子目标线速度 [m/s]，policy 输出 * 此值
+    # 若 pitch 向前栽（前倾倒地），尝试 -1.0：VMC 的 theta 约定可能与 LeggedLab 相反
+    theta_invert_sign: -1.0
+
+    v_max: 1.0 # 遥控 ly 满量程对应的前进速度 [m/s]
+    yaw_max: 1.0 # 遥控 lx 满量程对应的转向角速度 [rad/s]
+
+    # ========== 轮子速度环与指令限幅 ==========
+    # 轮子速度环 PID（与 vmc_controller 同结构的 pid_gains）
+    pid_gains:
+      wheel_vel:
+        left:
+          target: 0.0
+          kp: 100.0
+          ki: 0.0
+          kd: 10.0
+          u_clamp_max: 5.0
+          u_clamp_min: -5.0
+          i_clamp_max: 1.0
+          i_separation_threshold: 0.0
+        right:
+          target: 0.0
+          kp: -100.0
+          ki: 0.0
+          kd: -10.0
+          u_clamp_max: 5.0
+          u_clamp_min: -5.0
+          i_clamp_max: 1.0
+          i_separation_threshold: 0.0

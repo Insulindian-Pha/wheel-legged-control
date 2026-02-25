@@ -14,13 +14,14 @@ namespace vmc_controller {
 VMCController::VMCController()
     : pitch_(0.0), pitch_gyro_(0.0), received_imu_(false), left_F0_(0.0),
       left_Tp_(0.0), right_F0_(0.0), right_Tp_(0.0),
-      received_force_command_(false), left_desired_l0_(0.2),
-      right_desired_l0_(0.2), left_desired_theta_(0.0),
-      right_desired_theta_(0.0), left_front_joint_offset_(0.0),
-      left_rear_joint_offset_(0.0), right_front_joint_offset_(0.0),
-      right_rear_joint_offset_(0.0), left_front_joint_invert_sign_(1.0),
-      left_rear_joint_invert_sign_(1.0), right_front_joint_invert_sign_(1.0),
-      right_rear_joint_invert_sign_(1.0), enable_anti_split_(true),
+      received_force_command_(false), enable_anti_split_(true),
+      left_desired_l0_(0.2), right_desired_l0_(0.2), left_desired_theta_(0.0),
+      right_desired_theta_(0.0), vmc_reference_topic_(""),
+      received_vmc_reference_(false),
+      left_front_joint_offset_(0.0), left_rear_joint_offset_(0.0),
+      right_front_joint_offset_(0.0), right_rear_joint_offset_(0.0),
+      left_front_joint_invert_sign_(1.0), left_rear_joint_invert_sign_(1.0),
+      right_front_joint_invert_sign_(1.0), right_rear_joint_invert_sign_(1.0),
       pitch_invert_sign_(1.0), enable_debug_(false),
       debug_print_frequency_(10.0), debug_print_counter_(0) {}
 
@@ -34,6 +35,8 @@ controller_interface::CallbackReturn VMCController::on_init() {
     auto_declare<std::string>("imu_topic", "/imu/data");
     auto_declare<std::string>("force_command_topic",
                               "/vmc_controller/force_command");
+    auto_declare<std::string>("vmc_reference_topic",
+                              "/vmc_controller/reference");
     auto_declare<std::string>("vmc_state_topic", "/vmc_controller/vmc_state");
     auto_declare<double>("max_torque", 90.0);
 
@@ -105,6 +108,8 @@ controller_interface::CallbackReturn VMCController::on_configure(
   imu_topic_ = get_node()->get_parameter("imu_topic").as_string();
   force_command_topic_ =
       get_node()->get_parameter("force_command_topic").as_string();
+  vmc_reference_topic_ =
+      get_node()->get_parameter("vmc_reference_topic").as_string();
   vmc_state_topic_ = get_node()->get_parameter("vmc_state_topic").as_string();
   max_torque_ = get_node()->get_parameter("max_torque").as_double();
 
@@ -201,6 +206,12 @@ controller_interface::CallbackReturn VMCController::on_configure(
           std::bind(&VMCController::force_command_callback, this,
                     std::placeholders::_1));
 
+  vmc_reference_subscription_ =
+      get_node()->create_subscription<std_msgs::msg::Float64MultiArray>(
+          vmc_reference_topic_, 10,
+          std::bind(&VMCController::vmc_reference_callback, this,
+                    std::placeholders::_1));
+
   // Create publisher for VMC state
   vmc_state_publisher_ =
       get_node()->create_publisher<vmc_controller::msg::VMCState>(
@@ -211,6 +222,8 @@ controller_interface::CallbackReturn VMCController::on_configure(
               imu_topic_.c_str());
   RCLCPP_INFO(get_node()->get_logger(), "Subscribing to force commands: %s",
               force_command_topic_.c_str());
+  RCLCPP_INFO(get_node()->get_logger(), "Subscribing to VMC reference: %s",
+              vmc_reference_topic_.c_str());
   RCLCPP_INFO(get_node()->get_logger(), "Publishing VMC state to: %s",
               vmc_state_topic_.c_str());
   RCLCPP_INFO(get_node()->get_logger(), "Max torque: %.2f Nm", max_torque_);
@@ -447,12 +460,21 @@ VMCController::update(const rclcpp::Time &time,
   double left_current_theta = left_leg_.getTheta();
   double right_current_theta = right_leg_.getTheta();
 
+  // Set L0 PID targets from desired_l0 (from params or from vmc_reference topic)
+  left_leg_l0_pid_->get_pid().setTarget(static_cast<float>(left_desired_l0_));
+  right_leg_l0_pid_->get_pid().setTarget(static_cast<float>(right_desired_l0_));
+
   // Calculate F0 using PID with L0 as feedback
   left_F0_ = left_leg_l0_pid_->update(left_current_l0, time);
   right_F0_ = right_leg_l0_pid_->update(right_current_l0, time);
 
-  // left_Tp_ = left_leg_theta_pid_->update(left_current_theta, time);
-  // right_Tp_ = right_leg_theta_pid_->update(right_current_theta, time);
+  // Tp: from force_command (LQR mode) when received; otherwise from theta PID with desired_theta (params or reference)
+  if (!received_force_command_) {
+    left_leg_theta_pid_->get_pid().setTarget(static_cast<float>(left_desired_theta_));
+    right_leg_theta_pid_->get_pid().setTarget(static_cast<float>(right_desired_theta_));
+    left_Tp_ = left_leg_theta_pid_->update(left_current_theta, time);
+    right_Tp_ = right_leg_theta_pid_->update(right_current_theta, time);
+  }
 
   // 防劈岔补偿：theta_err = 0 - (left_theta + right_theta)，PID 输出 leg_tp
   // 叠加到左右髋 Tp（仿 chassisR_task）
@@ -536,6 +558,26 @@ void VMCController::force_command_callback(
   } else {
     RCLCPP_WARN(get_node()->get_logger(),
                 "Received force command with %zu values, but expected 4. "
+                "Ignoring message.",
+                msg->data.size());
+  }
+}
+
+void VMCController::vmc_reference_callback(
+    const std_msgs::msg::Float64MultiArray::SharedPtr msg) {
+  received_vmc_reference_ = true;
+  if (msg->data.size() >= 4) {
+    left_desired_theta_ = msg->data[0];
+    left_desired_l0_ = msg->data[1];
+    right_desired_theta_ = msg->data[2];
+    right_desired_l0_ = msg->data[3];
+    RCLCPP_DEBUG(
+        get_node()->get_logger(),
+        "Received VMC reference: L_theta=%.3f, L_l0=%.3f, R_theta=%.3f, R_l0=%.3f",
+        left_desired_theta_, left_desired_l0_, right_desired_theta_, right_desired_l0_);
+  } else {
+    RCLCPP_WARN(get_node()->get_logger(),
+                "Received VMC reference with %zu values, but expected 4. "
                 "Ignoring message.",
                 msg->data.size());
   }

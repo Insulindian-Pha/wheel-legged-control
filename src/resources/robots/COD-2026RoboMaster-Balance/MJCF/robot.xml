@@ -27,7 +27,7 @@
     <mesh name="Right_Wheel_link" content_type="model/stl" file="../meshes/Right_Wheel_link.STL" />
   </asset>
   <worldbody>
-    <body name="base" pos="0 0 0.26">
+    <body name="base" pos="0 0 0.28">
       <!-- <joint name="base_y_joint" type="slide" axis="0 1 0" damping="0.1"/>
       <joint name="base_z_joint" type="slide" axis="0 0 0" damping="0.1"/> -->
       <joint name="base_free_joint" type="free"/>
