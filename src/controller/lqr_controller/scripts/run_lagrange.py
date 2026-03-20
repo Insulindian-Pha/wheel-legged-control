@@ -40,10 +40,10 @@ try:
     q2 = 5    # 速度 dot_s
     q3 = 10   # 航向角 fai
     q4 = 5    # 航向角速度 dot_fai
-    q5 = 10   # 左腿角度 theta_ll
-    q6 = 3    # 左腿角速度 dot_theta_ll
-    q7 = 10   # 右腿角度 theta_lr
-    q8 = 3    # 右腿角速度 dot_theta_lr
+    q5 = 15   # 左腿角度 theta_ll
+    q6 = 10    # 左腿角速度 dot_theta_ll
+    q7 = 15   # 右腿角度 theta_lr
+    q8 = 10    # 右腿角速度 dot_theta_lr
     q9 = 3000   # 身体角度 theta_b
     q10 = 50   # 身体角速度 dot_theta_b
     
