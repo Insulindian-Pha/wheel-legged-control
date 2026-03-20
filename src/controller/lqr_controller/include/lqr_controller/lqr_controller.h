@@ -11,6 +11,8 @@
 #include <string>
 #include <vector>
 
+#include "lqr_controller/odom/odom_publisher.hpp"
+
 #include "control_input_msgs/msg/inputs.hpp"
 #include "controller_interface/controller_interface.hpp"
 #include "hardware_interface/types/hardware_interface_type_values.hpp"
@@ -95,6 +97,17 @@ protected:
       lqr_state_publisher_;
   std::string lqr_state_topic_;
 
+  // Odometry handler (IMU subscribe inside; wheel v_body passed in)
+  std::shared_ptr<odom::OdomPublisher> odom_handler_ = nullptr;
+  std::string odom_topic_;
+  std::string odom_frame_id_;
+  std::string base_frame_id_;
+  bool enable_odom_tf_ = true;
+  bool enable_odom_msg_ = true;
+  bool require_imu_for_odom_ = true;
+  bool odom_use_pitch_ = true;
+  double odom_publish_rate_ = 50.0;  // Hz
+
   // VMC state data (from subscription)
   double left_theta_;
   double left_d_theta_;
@@ -102,6 +115,7 @@ protected:
   double right_d_theta_;
   double pitch_;
   double pitch_gyro_;
+  double roll_gyro_;
   double left_F0_; // Current F0 from VMC (to preserve when updating Tp)
   double right_F0_;
   bool received_vmc_state_;
@@ -208,6 +222,8 @@ protected:
   void publish_lqr_state(double wheel_torque_left, double wheel_torque_right,
                          double tp_left, double tp_right,
                          const StateOutputContributions &output_contributions);
+
+  void publish_odom_and_tf();
 
   // Utility function to normalize angle to [-π, π]
   static double normalize_angle(double angle);

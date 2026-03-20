@@ -6,6 +6,7 @@
 #include "lqr_controller/lqr_controller.h"
 #include <algorithm>
 #include <cmath>
+#include <iterator>
 
 namespace lqr_controller
 {
@@ -65,12 +66,20 @@ controller_interface::CallbackReturn LQRController::on_init()
     auto_declare<std::string>("imu_topic", "");  // Empty: pitch/yaw from VMC and wheel; non-empty: from IMU
     auto_declare<std::string>("force_command_topic", "/vmc_controller/force_command");
     auto_declare<std::string>("lqr_state_topic", "/lqr_controller/lqr_state");
+    auto_declare<std::string>("odom_topic", "/odom");
+    auto_declare<std::string>("odom_frame_id", "odom");
+    auto_declare<std::string>("base_frame_id", "base_link");
     auto_declare<double>("wheel_radius", 0.06);
     auto_declare<double>("max_wheel_torque", 4.0);
     auto_declare<std::string>("control_input_topic", "/control_input");
     auto_declare<double>("v_max", 1.0);
     auto_declare<double>("yaw_max", 1.0);
     auto_declare<double>("td_r", 300.0);
+    auto_declare<bool>("enable_odom_tf", true);
+    auto_declare<bool>("enable_odom_msg", true);
+    auto_declare<bool>("require_imu_for_odom", true);
+    auto_declare<bool>("odom_use_pitch", true);
+    auto_declare<double>("odom_publish_rate", 50.0);
 
     // Declare LQR gains for left wheel torque (10 values)
     for (int i = 0; i < 10; ++i)
@@ -133,12 +142,19 @@ controller_interface::CallbackReturn LQRController::on_configure(const rclcpp_li
   received_imu_ = false;
   force_command_topic_ = get_node()->get_parameter("force_command_topic").as_string();
   lqr_state_topic_ = get_node()->get_parameter("lqr_state_topic").as_string();
+  odom_topic_ = get_node()->get_parameter("odom_topic").as_string();
+  odom_frame_id_ = get_node()->get_parameter("odom_frame_id").as_string();
+  base_frame_id_ = get_node()->get_parameter("base_frame_id").as_string();
   wheel_radius_ = get_node()->get_parameter("wheel_radius").as_double();
   max_wheel_torque_ = get_node()->get_parameter("max_wheel_torque").as_double();
   control_input_topic_ = get_node()->get_parameter("control_input_topic").as_string();
   v_max_ = get_node()->get_parameter("v_max").as_double();
   yaw_max_ = get_node()->get_parameter("yaw_max").as_double();
   td_r_ = get_node()->get_parameter("td_r").as_double();
+  enable_odom_tf_ = get_node()->get_parameter("enable_odom_tf").as_bool();
+  enable_odom_msg_ = get_node()->get_parameter("enable_odom_msg").as_bool();
+  require_imu_for_odom_ = get_node()->get_parameter("require_imu_for_odom").as_bool();
+  odom_publish_rate_ = get_node()->get_parameter("odom_publish_rate").as_double();
   td_position_.setR(static_cast<float>(td_r_));
   td_yaw_.setR(static_cast<float>(td_r_));
 
@@ -201,6 +217,11 @@ controller_interface::CallbackReturn LQRController::on_configure(const rclcpp_li
 
   // Create publisher for LQR state
   lqr_state_publisher_ = get_node()->create_publisher<lqr_controller::msg::LQRState>(lqr_state_topic_, 10);
+
+  // Create odom handler (IMU topic is subscribed inside this module).
+  odom_handler_ = std::make_shared<odom::OdomPublisher>(
+    get_node(), imu_topic_, odom_topic_, odom_frame_id_, base_frame_id_,
+    enable_odom_tf_, enable_odom_msg_, require_imu_for_odom_, odom_use_pitch_, odom_publish_rate_);
 
   // Create subscription for control_input (ly -> v_set, lx -> dot_fai_set)
   control_input_subscription_ = get_node()->create_subscription<control_input_msgs::msg::Inputs>(
@@ -296,6 +317,11 @@ controller_interface::CallbackReturn LQRController::on_activate(const rclcpp_lif
   dot_fai_set_ = 0.0;
   yaw_ = 0.0;
   yaw_gyro_ = 0.0;
+  roll_gyro_ = 0.0;
+  if (odom_handler_)
+  {
+    odom_handler_->reset();
+  }
 
   RCLCPP_INFO(get_node()->get_logger(), "LQR Controller activated");
   return controller_interface::CallbackReturn::SUCCESS;
@@ -381,6 +407,12 @@ controller_interface::return_type LQRController::update(const rclcpp::Time& /*ti
   // Publish LQR state
   publish_lqr_state(wheel_torque_left, wheel_torque_right, tp_left, tp_right, output_contributions);
 
+  // Update odometry + TF (wheel v_body passed in; IMU subscribed inside odom module).
+  if (odom_handler_)
+  {
+    odom_handler_->update(dt, x_velocity_);
+  }
+
   return controller_interface::return_type::OK;
 }
 
@@ -409,6 +441,7 @@ void LQRController::imu_callback(const sensor_msgs::msg::Imu::SharedPtr msg)
   pitch_gyro_ = msg->angular_velocity.y;
   yaw_ = quaternion_to_yaw(msg->orientation.x, msg->orientation.y, msg->orientation.z, msg->orientation.w);
   yaw_gyro_ = msg->angular_velocity.z;
+  roll_gyro_ = msg->angular_velocity.x;
 }
 
 void LQRController::control_input_callback(const control_input_msgs::msg::Inputs::SharedPtr msg)
@@ -551,6 +584,8 @@ void LQRController::update_state_estimation(double dt)
   x_velocity_ = avg_wheel_vel * wheel_radius_;
   // Integrate position
   x_position_ += x_velocity_ * dt;
+
+  // odom (x,y,vx,vy) is handled inside the odom module
 }
 
 void LQRController::publish_force_command(double left_F0, double left_Tp, double right_F0, double right_Tp)
@@ -648,6 +683,11 @@ void LQRController::publish_lqr_state(double wheel_torque_left, double wheel_tor
 
     lqr_state_publisher_->publish(msg);
   }
+}
+
+void LQRController::publish_odom_and_tf()
+{
+  // Deprecated: odometry + TF are handled in odom_handler_ (see lqr_controller/odom).
 }
 
 controller_interface::InterfaceConfiguration LQRController::command_interface_configuration() const

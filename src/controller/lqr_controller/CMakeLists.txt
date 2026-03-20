@@ -18,6 +18,10 @@ find_package(pluginlib REQUIRED)
 find_package(rclcpp_lifecycle REQUIRED)
 find_package(vmc_controller REQUIRED)
 find_package(control_input_msgs REQUIRED)
+find_package(nav_msgs REQUIRED)
+find_package(geometry_msgs REQUIRED)
+find_package(tf2 REQUIRED)
+find_package(tf2_ros REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
 
 # Generate messages
@@ -28,7 +32,9 @@ rosidl_generate_interfaces(${PROJECT_NAME}
 
 # Build the controller library
 add_library(lqr_controller_lib SHARED
-    src/lqr_controller.cpp)
+    src/lqr_controller.cpp
+    src/odom/odom_estimator.cpp
+    src/odom/odom_publisher.cpp)
 
 set_target_properties(lqr_controller_lib PROPERTIES OUTPUT_NAME lqr_controller)
 
@@ -50,6 +56,10 @@ ament_target_dependencies(
         rclcpp_lifecycle
         vmc_controller
         control_input_msgs
+        nav_msgs
+        geometry_msgs
+        tf2
+        tf2_ros
 )
 
 # Link message typesupport
@@ -87,6 +97,6 @@ if (BUILD_TESTING)
     ament_lint_auto_find_test_dependencies()
 endif ()
 
-ament_export_dependencies(rclcpp std_msgs sensor_msgs controller_interface hardware_interface pluginlib rclcpp_lifecycle vmc_controller control_input_msgs rosidl_default_runtime)
+ament_export_dependencies(rclcpp std_msgs sensor_msgs controller_interface hardware_interface pluginlib rclcpp_lifecycle vmc_controller control_input_msgs nav_msgs geometry_msgs tf2 tf2_ros rosidl_default_runtime)
 ament_package()
 
