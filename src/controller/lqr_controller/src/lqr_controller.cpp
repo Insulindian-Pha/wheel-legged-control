@@ -348,8 +348,13 @@ controller_interface::return_type LQRController::update(const rclcpp::Time& /*ti
     dt = 0.002;  // Default 500Hz
   }
 
-  // Check if we have received VMC state
-  if (!received_vmc_state_)
+  const bool have_vmc_state = received_vmc_state_;
+
+  // Always update wheel-based estimation so odom/TF can progress even before VMC arrives.
+  update_state_estimation(dt);
+
+  // If we don't have VMC yet, we still publish odom/TF, but skip LQR/VMC-dependent control.
+  if (!have_vmc_state)
   {
     // Set wheel torques to zero if no VMC state received
     if (!left_wheel_cmd_.empty())
@@ -360,11 +365,13 @@ controller_interface::return_type LQRController::update(const rclcpp::Time& /*ti
     {
       right_wheel_cmd_[0].get().set_value(0.0);
     }
+
+    if (odom_handler_)
+    {
+      odom_handler_->update(dt, x_velocity_);
+    }
     return controller_interface::return_type::OK;
   }
-
-  // Update state estimation (simple integration)
-  update_state_estimation(dt);
 
   // Raw targets: position and yaw from integration (yaw_set_raw_ += yaw_cmd_ * dt)
   x_set_raw_ += v_cmd_ * dt;
@@ -683,11 +690,6 @@ void LQRController::publish_lqr_state(double wheel_torque_left, double wheel_tor
 
     lqr_state_publisher_->publish(msg);
   }
-}
-
-void LQRController::publish_odom_and_tf()
-{
-  // Deprecated: odometry + TF are handled in odom_handler_ (see lqr_controller/odom).
 }
 
 controller_interface::InterfaceConfiguration LQRController::command_interface_configuration() const

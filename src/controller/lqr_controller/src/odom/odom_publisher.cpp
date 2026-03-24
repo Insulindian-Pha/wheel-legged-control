@@ -39,7 +39,7 @@ OdomPublisher::OdomPublisher(
     odom_tf_broadcaster_ = std::make_shared<tf2_ros::TransformBroadcaster>(node_);
   }
 
-  // IMU subscription: yaw/pitch/gyro for odom pose.
+  // IMU subscription: orientation (RPY) + gyro for odom pose / twist.
   imu_subscription_ = node_->create_subscription<sensor_msgs::msg::Imu>(
     imu_topic, 10, std::bind(&OdomPublisher::imu_callback, this, std::placeholders::_1));
 }
@@ -48,8 +48,9 @@ void OdomPublisher::reset()
 {
   estimator_.reset();
   received_imu_ = false;
-  yaw_ = 0.0;
+  roll_ = 0.0;
   pitch_ = 0.0;
+  yaw_ = 0.0;
   yaw_gyro_ = 0.0;
   pitch_gyro_ = 0.0;
   roll_gyro_ = 0.0;
@@ -82,8 +83,8 @@ void OdomPublisher::update(double dt, double v_body)
   }
   last_odom_publish_time_ = now;
 
-  // Build pose orientation.
-  const double roll = 0.0;
+  // Build pose orientation (RPY from IMU; pitch optional zero per odom_use_pitch_).
+  const double roll = roll_;
   const double pitch = odom_use_pitch_ ? pitch_ : 0.0;
   tf2::Quaternion q;
   q.setRPY(roll, pitch, yaw_);
@@ -142,32 +143,14 @@ void OdomPublisher::imu_callback(const sensor_msgs::msg::Imu::SharedPtr msg)
 {
   received_imu_ = true;
 
-  // Orientation -> yaw/pitch
-  pitch_ = quaternion_to_pitch(msg->orientation.x, msg->orientation.y, msg->orientation.z, msg->orientation.w);
-  yaw_ = quaternion_to_yaw(msg->orientation.x, msg->orientation.y, msg->orientation.z, msg->orientation.w);
+  tf2::Quaternion q_imu(msg->orientation.x, msg->orientation.y, msg->orientation.z, msg->orientation.w);
+  q_imu.normalize();
+  tf2::Matrix3x3 m(q_imu);
+  m.getRPY(roll_, pitch_, yaw_);
 
-  // Angular velocities -> roll/pitch/yaw rates
   roll_gyro_ = msg->angular_velocity.x;
   pitch_gyro_ = msg->angular_velocity.y;
   yaw_gyro_ = msg->angular_velocity.z;
-}
-
-double OdomPublisher::quaternion_to_pitch(double x, double y, double z, double w)
-{
-  // Same formula as controller-side: convert quaternion to Euler pitch.
-  const double sinp = 2 * (w * y - z * x);
-  if (std::abs(sinp) >= 1)
-  {
-    return std::copysign(M_PI / 2, sinp);
-  }
-  return std::asin(sinp);
-}
-
-double OdomPublisher::quaternion_to_yaw(double x, double y, double z, double w)
-{
-  const double siny_cosp = 2 * (w * z + x * y);
-  const double cosy_cosp = 1 - 2 * (y * y + z * z);
-  return std::atan2(siny_cosp, cosy_cosp);
 }
 
 }  // namespace odom

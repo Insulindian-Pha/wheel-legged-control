@@ -223,8 +223,6 @@ protected:
                          double tp_left, double tp_right,
                          const StateOutputContributions &output_contributions);
 
-  void publish_odom_and_tf();
-
   // Utility function to normalize angle to [-π, π]
   static double normalize_angle(double angle);
 };
