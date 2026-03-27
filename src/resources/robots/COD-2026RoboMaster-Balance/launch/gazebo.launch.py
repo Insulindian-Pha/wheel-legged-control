@@ -16,18 +16,13 @@ def generate_launch_description():
     # Path to xacro file
     xacro_file = os.path.join(pkg_share, 'urdf', 'cod_balance_robot.xacro')
 
-    # Process xacro file to generate URDF
-    # xacro will automatically handle the include and resolve package:// paths
+    # Process xacro file to generate URDF and keep package:// mesh URIs for Foxglove.
     robot_desc = subprocess.run(
         ['xacro', xacro_file],
         capture_output=True,
         text=True,
         check=True
     ).stdout
-    
-    # Replace package://cod_2026_balance/ with absolute path to package share directory
-    # This allows Gazebo to find mesh files
-    robot_desc = robot_desc.replace('package://cod_2026_balance/', pkg_share + '/')
 
     # Start Gazebo with ROS plugins
     start_gazebo_cmd = ExecuteProcess(

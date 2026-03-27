@@ -21,16 +21,13 @@ def generate_launch_description():
     # xacro文件路径
     xacro_file = os.path.join(pkg_share, 'urdf', 'cod_balance_robot.xacro')
 
-    # 使用subprocess处理xacro文件生成URDF,并设置use_gazebo参数为true
+    # 使用subprocess处理xacro文件生成URDF,并保留package:// mesh路径供Foxglove加载
     robot_desc = subprocess.run(
         ['xacro', xacro_file, 'use_gazebo:=true'],
         capture_output=True,
         text=True,
         check=True
     ).stdout
-    
-    # 替换package://路径为file://绝对路径,使Gazebo和RViz都能找到mesh文件
-    robot_desc = robot_desc.replace('package://cod_2026_balance/', 'file://' + pkg_share + '/')
 
     # 启动Gazebo(使用单个gazebo命令,加载ROS插件)
     start_gazebo_cmd = ExecuteProcess(
@@ -193,5 +190,4 @@ def generate_launch_description():
 #
 # 2. 使用键盘控制机器人:
 #    ros2 run teleop_twist_keyboard teleop_twist_keyboard --ros-args -r /cmd_vel:=/diff_drive_controller/cmd_vel -p stamped:=true
-
 

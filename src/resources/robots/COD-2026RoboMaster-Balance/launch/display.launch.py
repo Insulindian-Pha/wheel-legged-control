@@ -14,16 +14,13 @@ def generate_launch_description():
     # Get xacro file path (use the main xacro file that includes others)
     xacro_file = os.path.join(pkg_share, 'urdf', 'cod_balance_robot.xacro')
 
-    # Process xacro file to generate URDF
-    # xacro will automatically handle the include and resolve package:// paths
+    # Process xacro file to generate URDF and keep package:// mesh URIs for Foxglove.
     robot_desc = subprocess.run(
         ['xacro', xacro_file],
         capture_output=True,
         text=True,
         check=True
     ).stdout
-    
-    robot_desc = robot_desc.replace('package://cod_2026_balance/', 'file://' + pkg_share + '/')
 
     # Declare launch arguments
     use_sim_time = LaunchConfiguration('use_sim_time', default='false')
@@ -57,4 +54,3 @@ def generate_launch_description():
         robot_state_publisher_node,
         joint_state_publisher_gui_node,
     ])
-

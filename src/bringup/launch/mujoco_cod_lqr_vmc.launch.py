@@ -37,14 +37,8 @@ def launch_setup(context, *args, **kwargs):
         ]
     )
 
+    # Keep package:// mesh URIs so Foxglove can request assets through foxglove_bridge.
     robot_description_str = robot_description_content.perform(context)
-    
-    # Replace package:// paths with absolute paths for mesh files
-    cod_balance_pkg_share_path = cod_balance_pkg_share.perform(context)
-    robot_description_str = robot_description_str.replace(
-        'package://cod_2026_balance/', 
-        'file://' + cod_balance_pkg_share_path + '/'
-    )
 
     robot_description = {"robot_description": ParameterValue(value=robot_description_str, value_type=str)}
 
@@ -101,4 +95,3 @@ def generate_launch_description():
             OpaqueFunction(function=launch_setup),
         ]
     )
-

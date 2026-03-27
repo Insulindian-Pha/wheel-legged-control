@@ -1,6 +1,6 @@
 controller_manager:
   ros__parameters:
-    update_rate: 500
+    update_rate: 200
 
     joint_state_broadcaster:
       type: joint_state_broadcaster/JointStateBroadcaster
@@ -47,11 +47,11 @@ joint_group_effort_controller:
   ros__parameters:
     joints:
       - Left_front_joint
-      - Left_rear_joint
       - Left_Wheel_joint
+      - Left_rear_joint
       - Right_front_joint
-      - Right_rear_joint
       - Right_Wheel_joint
+      - Right_rear_joint
 
 vmc_controller:
   ros__parameters:

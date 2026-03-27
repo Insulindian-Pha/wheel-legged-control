@@ -22,16 +22,13 @@ def generate_launch_description():
     # xacro文件路径
     xacro_file = os.path.join(pkg_share, 'urdf', 'cod_balance_robot.xacro')
 
-    # 使用subprocess处理xacro文件生成URDF,并设置use_gazebo参数为true
+    # 使用subprocess处理xacro文件生成URDF,并保留package:// mesh路径供Foxglove加载
     robot_desc = subprocess.run(
         ['xacro', xacro_file, 'use_gazebo:=true'],
         capture_output=True,
         text=True,
         check=True
     ).stdout
-    
-    # 替换package://路径为file://绝对路径,使Gazebo和RViz都能找到mesh文件
-    robot_desc = robot_desc.replace('package://cod_2026_balance/', 'file://' + pkg_share + '/')
     
     # 按照博客方法：创建world link，然后用fixed关节将base_link固定到world
     # 在robot标签开头添加world link和固定关节
@@ -175,4 +172,3 @@ def generate_launch_description():
 #    ros2 topic pub /vmc_controller/force_command std_msgs/msg/Float64MultiArray "{data: [left_F0, left_Tp, right_F0, right_Tp]}"
 #
 # 3. 机器人固定在半空中，可以观察VMC控制效果，不受重力影响
-

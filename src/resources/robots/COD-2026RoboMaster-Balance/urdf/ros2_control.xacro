@@ -130,46 +130,95 @@
             <!-- ROS2 Control for Real Hardware/Mock -->
         <ros2_control name="CodBalanceHardwareInterface" type="system">
             <hardware>
-                <plugin>mock_components/GenericSystem</plugin>
-                <param name="calculate_dynamics">true</param>
+                <plugin>librmcs_hardware/LibrmcsSystem</plugin>
+                <param name="usb_pid">-1</param>
+                <param name="startup_timeout_ms">1500</param>
+                <param name="command_timeout_ms">100</param>
+                <param name="allow_partial_feedback">true</param>
             </hardware>
             <joint name="Left_front_joint">
                 <command_interface name="effort" />
                 <state_interface name="position" />
                 <state_interface name="velocity" />
                 <state_interface name="effort" />
+                <param name="vendor">BM</param>
+                <param name="model">P1010B_111</param>
+                <param name="can_bus">can1</param>
+                <param name="can_id">0x55</param>
+                <param name="encoder_zero_point">0</param>
+                <param name="reduction_ratio">1</param>
+                <param name="reversed">false</param>
+                <param name="multi_turn_angle">false</param>
             </joint>
             <joint name="Left_rear_joint">
                 <command_interface name="effort" />
                 <state_interface name="position" />
                 <state_interface name="velocity" />
                 <state_interface name="effort" />
+                <param name="vendor">BM</param>
+                <param name="model">P1010B_111</param>
+                <param name="can_bus">can1</param>
+                <param name="can_id">0x56</param>
+                <param name="encoder_zero_point">0</param>
+                <param name="reduction_ratio">1</param>
+                <param name="reversed">false</param>
+                <param name="multi_turn_angle">false</param>
             </joint>
             <joint name="Left_Wheel_joint">
-                <command_interface name="velocity" />
                 <command_interface name="effort" />
                 <state_interface name="position" />
                 <state_interface name="velocity" />
                 <state_interface name="effort" />
+                <param name="vendor">BM</param>
+                <param name="model">M1505B_111</param>
+                <param name="can_bus">can1</param>
+                <param name="can_id">0x9E</param>
+                <param name="encoder_zero_point">0</param>
+                <param name="reduction_ratio">1</param>
+                <param name="reversed">false</param>
+                <param name="multi_turn_angle">false</param>
             </joint>
             <joint name="Right_front_joint">
                 <command_interface name="effort" />
                 <state_interface name="position" />
                 <state_interface name="velocity" />
                 <state_interface name="effort" />
+                <param name="vendor">BM</param>
+                <param name="model">P1010B_111</param>
+                <param name="can_bus">can1</param>
+                <param name="can_id">0x52</param>
+                <param name="encoder_zero_point">0</param>
+                <param name="reduction_ratio">1</param>
+                <param name="reversed">false</param>
+                <param name="multi_turn_angle">false</param>
             </joint>
             <joint name="Right_rear_joint">
                 <command_interface name="effort" />
                 <state_interface name="position" />
                 <state_interface name="velocity" />
                 <state_interface name="effort" />
+                <param name="vendor">BM</param>
+                <param name="model">P1010B_111</param>
+                <param name="can_bus">can1</param>
+                <param name="can_id">0x51</param>
+                <param name="encoder_zero_point">0</param>
+                <param name="reduction_ratio">1</param>
+                <param name="reversed">false</param>
+                <param name="multi_turn_angle">false</param>
             </joint>
             <joint name="Right_Wheel_joint">
-                <command_interface name="velocity" />
                 <command_interface name="effort" />
                 <state_interface name="position" />
                 <state_interface name="velocity" />
                 <state_interface name="effort" />
+                <param name="vendor">BM</param>
+                <param name="model">M1505B_111</param>
+                <param name="can_bus">can1</param>
+                <param name="can_id">0x9A</param>
+                <param name="encoder_zero_point">0</param>
+                <param name="reduction_ratio">1</param>
+                <param name="reversed">false</param>
+                <param name="multi_turn_angle">false</param>
             </joint>
         </ros2_control>
         </xacro:unless>
