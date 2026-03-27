@@ -16,6 +16,7 @@
   <depend>hardware_interface</depend>
   <depend>pluginlib</depend>
   <depend>pid_controller</depend>
+  <depend>pinocchio</depend>
   <depend>rosidl_default_generators</depend>
   <exec_depend>rosidl_default_runtime</exec_depend>
 

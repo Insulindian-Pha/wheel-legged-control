@@ -50,7 +50,7 @@ double DjiMotorDevice::velocity() const { return motor_.velocity(); }
 double DjiMotorDevice::torque() const { return motor_.torque(); }
 
 librmcs::device::DjiMotor::Type DjiMotorDevice::to_motor_type(const std::string & model) {
-  if (model == "GM6020" || model == "M6020") {
+  if (model == "GM6020") {
     return librmcs::device::DjiMotor::Type::GM6020;
   }
   if (model == "GM6020_VOLTAGE") {

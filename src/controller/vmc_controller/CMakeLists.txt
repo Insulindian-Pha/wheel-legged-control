@@ -18,6 +18,8 @@ find_package(pluginlib REQUIRED)
 find_package(rclcpp_lifecycle REQUIRED)
 find_package(pid_controller REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
+list(APPEND CMAKE_PREFIX_PATH "/opt/ros/humble/lib/x86_64-linux-gnu/cmake/pinocchio")
+find_package(pinocchio REQUIRED)
 
 # Generate messages
 rosidl_generate_interfaces(${PROJECT_NAME}
@@ -49,6 +51,9 @@ ament_target_dependencies(
         rclcpp_lifecycle
         pid_controller
 )
+
+target_link_libraries(vmc_controller_lib PUBLIC pinocchio::pinocchio)
+message(STATUS "Pinocchio backend enabled (required).")
 
 # Link message typesupport
 rosidl_get_typesupport_target(cpp_typesupport_target ${PROJECT_NAME} "rosidl_typesupport_cpp")

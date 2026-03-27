@@ -390,10 +390,11 @@ controller_interface::return_type VMCController::update(const rclcpp::Time& time
   right_leg_.setPhi1(right_phi1);
   right_leg_.setPhi4(right_phi4);
 
-  // Calculate VMC for legs (first pass to get L0 and theta)
-  // Note: We need to set F0 first (use previous value or 0) to calculate theta
+  // 先更新当前周期运动学状态，再读取 L0/theta 给 PID
+  left_leg_.calc1Left(pitch_correct, pitch_gyro_correct, dt);
+  right_leg_.calc1Right(pitch_correct, pitch_gyro_correct, dt);
 
-  // Get current L0 and theta values
+  // Get current L0 and theta values (current cycle)
   double left_current_l0 = left_leg_.getL0();
   double right_current_l0 = right_leg_.getL0();
   double left_current_theta = left_leg_.getTheta();
@@ -430,12 +431,7 @@ controller_interface::return_type VMCController::update(const rclcpp::Time& time
   left_leg_.setTp(left_Tp_);
   right_leg_.setTp(right_Tp_);
 
-  // Recalculate VMC with updated F0 and Tp
-  // Apply pitch polarity (reuse the adjusted values from above)
-  left_leg_.calc1Left(pitch_correct, pitch_gyro_correct, dt);
   left_leg_.calc2();
-
-  right_leg_.calc1Right(pitch_correct, pitch_gyro_correct, dt);
   right_leg_.calc2();
 
   // Clamp and set torques
