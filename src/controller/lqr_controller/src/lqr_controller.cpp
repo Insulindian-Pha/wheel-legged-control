@@ -405,8 +405,8 @@ controller_interface::return_type LQRController::update(const rclcpp::Time& /*ti
   wheel_torque_right = std::clamp(wheel_torque_right, -max_wheel_torque_, max_wheel_torque_);
 
   // Set wheel torque commands
-  left_wheel_cmd_[0].get().set_value(wheel_torque_left);
-  right_wheel_cmd_[0].get().set_value(wheel_torque_right);
+  // left_wheel_cmd_[0].get().set_value(wheel_torque_left);
+  // right_wheel_cmd_[0].get().set_value(wheel_torque_right);
 
   // Publish Tp updates to VMC controller
   publish_force_command(left_F0_, tp_left, right_F0_, tp_right);

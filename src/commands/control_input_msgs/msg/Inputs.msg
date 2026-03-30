@@ -2,6 +2,9 @@
 
 int32 command
 
+bool start
+bool stop
+
 float32 lx
 float32 ly
 float32 rx

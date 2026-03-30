@@ -448,10 +448,10 @@ controller_interface::return_type VMCController::update(const rclcpp::Time& time
   double right_rear_torque = right_rear_joint_invert_sign_ * right_rear_torque_raw;
 
   // Set command values
-  left_front_joint_cmd_[0].get().set_value(left_front_torque);
-  left_rear_joint_cmd_[0].get().set_value(left_rear_torque);
-  right_front_joint_cmd_[0].get().set_value(right_front_torque);
-  right_rear_joint_cmd_[0].get().set_value(right_rear_torque);
+  // left_front_joint_cmd_[0].get().set_value(left_front_torque);
+  // left_rear_joint_cmd_[0].get().set_value(left_rear_torque);
+  // right_front_joint_cmd_[0].get().set_value(right_front_torque);
+  // right_rear_joint_cmd_[0].get().set_value(right_rear_torque);
 
   // Publish VMC state
   publish_vmc_state(left_front_torque_raw, left_rear_torque_raw, right_front_torque_raw, right_rear_torque_raw);

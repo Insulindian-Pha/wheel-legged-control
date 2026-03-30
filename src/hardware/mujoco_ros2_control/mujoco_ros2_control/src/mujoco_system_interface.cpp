@@ -814,8 +814,8 @@ MujocoSystemInterface::on_init(const hardware_interface::HardwareComponentInterf
       glfwSetWindowSize(glfwGetCurrentContext(), window_width, window_height);
 
       // Hide UI panels programmatically
-      sim_->ui0_enable = false;  // Hide left panel
-      sim_->ui1_enable = false;  // Hide right panel
+      sim_->ui0_enable = true;  // Hide left panel
+      sim_->ui1_enable = true;  // Hide right panel
 
       // Notify sim that we are ready
       sim_ready->set_value();

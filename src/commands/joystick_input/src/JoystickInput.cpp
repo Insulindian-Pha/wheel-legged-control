@@ -15,6 +15,23 @@ JoystickInput::JoystickInput() : Node("joysick_input_node")
 
 void JoystickInput::joy_callback(sensor_msgs::msg::Joy::SharedPtr msg)
 {
+  // 独立的 start/stop 命令：start 锁存（按下 START 后保持 1，直到按下 STOP 置 0）
+  const bool stop_btn = (msg->buttons.size() > 6) ? static_cast<bool>(msg->buttons[6]) : false;
+  const bool start_btn = (msg->buttons.size() > 7) ? static_cast<bool>(msg->buttons[7]) : false;
+  const bool stop_rising = stop_btn && !prev_stop_btn_;
+  const bool start_rising = start_btn && !prev_start_btn_;
+
+  if (stop_rising) {
+    start_latched_ = false;
+  } else if (start_rising) {
+    start_latched_ = true;
+  }
+
+  inputs_.start = start_latched_;
+  inputs_.stop = stop_rising;
+  prev_stop_btn_ = stop_btn;
+  prev_start_btn_ = start_btn;
+
   if (msg->buttons[1] && msg->buttons[4])
   {
     inputs_.command = 1;  // LB + B

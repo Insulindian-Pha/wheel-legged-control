@@ -11,13 +11,22 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
 find_package(ament_cmake REQUIRED)
+find_package(Threads REQUIRED)
+find_package(rosidl_default_generators REQUIRED)
 find_package(hardware_interface REQUIRED)
+find_package(std_msgs REQUIRED)
+find_package(control_input_msgs REQUIRED)
 find_package(pluginlib REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(rclcpp_lifecycle REQUIRED)
 find_package(PkgConfig REQUIRED)
 
 pkg_check_modules(LIBUSB REQUIRED IMPORTED_TARGET libusb-1.0)
+
+rosidl_generate_interfaces(${PROJECT_NAME}
+  "msg/LibrmcsCanFrame.msg"
+  DEPENDENCIES std_msgs
+)
 
 find_package(librmcs QUIET CONFIG)
 
@@ -38,7 +47,7 @@ else()
   set(LIBRMCS_TARGET librmcs_headers)
 endif()
 
-add_library(librmcs_hardware SHARED
+add_library(${PROJECT_NAME}_plugin SHARED
   src/system/librmcs_system.cpp
   src/driver/grouped_can_command.cpp
   src/devices/bm_motor_device.cpp
@@ -50,30 +59,49 @@ add_library(librmcs_hardware SHARED
   src/devices/motor_device_factory.cpp
 )
 
-target_include_directories(librmcs_hardware PUBLIC
+target_include_directories(${PROJECT_NAME}_plugin PUBLIC
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
   $<INSTALL_INTERFACE:include>
 )
 
-target_link_libraries(librmcs_hardware
+target_link_libraries(${PROJECT_NAME}_plugin
   PRIVATE
     ${LIBRMCS_TARGET}
     PkgConfig::LIBUSB
 )
 
-ament_target_dependencies(librmcs_hardware
+ament_target_dependencies(${PROJECT_NAME}_plugin
   PUBLIC
     hardware_interface
     pluginlib
     rclcpp
     rclcpp_lifecycle
+    control_input_msgs
 )
+
+set_target_properties(${PROJECT_NAME}_plugin PROPERTIES OUTPUT_NAME ${PROJECT_NAME})
+
+add_executable(librmcs_can_echo tools/librmcs_can_echo.cpp tools/can_echo_board.cpp)
+target_include_directories(librmcs_can_echo PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/tools)
+target_link_libraries(librmcs_can_echo PRIVATE ${LIBRMCS_TARGET} PkgConfig::LIBUSB Threads::Threads)
+
+add_executable(librmcs_can_bridge_node src/tools/librmcs_can_bridge_node.cpp tools/can_echo_board.cpp)
+target_include_directories(librmcs_can_bridge_node PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/tools)
+ament_target_dependencies(librmcs_can_bridge_node rclcpp)
+target_link_libraries(librmcs_can_bridge_node ${LIBRMCS_TARGET} PkgConfig::LIBUSB Threads::Threads)
+rosidl_get_typesupport_target(cpp_typesupport_target ${PROJECT_NAME} "rosidl_typesupport_cpp")
+target_link_libraries(librmcs_can_bridge_node "${cpp_typesupport_target}")
 
 pluginlib_export_plugin_description_file(hardware_interface librmcs_hardware_plugin.xml)
 
 install(
-  TARGETS librmcs_hardware
+  TARGETS ${PROJECT_NAME}_plugin
   LIBRARY DESTINATION lib
+)
+
+install(
+  TARGETS librmcs_can_echo librmcs_can_bridge_node
+  DESTINATION lib/${PROJECT_NAME}
 )
 
 install(
@@ -85,5 +113,7 @@ install(
   FILES librmcs_hardware_plugin.xml
   DESTINATION share/${PROJECT_NAME}
 )
+
+ament_export_dependencies(rosidl_default_runtime)
 
 ament_package()

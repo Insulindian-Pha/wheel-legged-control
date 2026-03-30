@@ -69,7 +69,9 @@ public:
             needs_startup_warmup_ = false;
             break;
         case Type::M1505B_111:
-            feedback_base_id_ = 0x96;
+            // Real hardware reports feedback on 0x0A0 + motor_id (motor_id in [1, 8]),
+            // e.g. 0x0A1, 0x0A2. Keep the same motor_id mapping logic.
+            feedback_base_id_ = 0xA0;
             command_can_id_low_ = 0x32;
             command_can_id_high_ = 0x33;
             raw_position_max_ = 32767;

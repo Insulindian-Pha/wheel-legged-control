@@ -2,9 +2,6 @@
 
 #include <algorithm>
 #include <cmath>
-#include <exception>
-#include <cstdio>
-#include <utility>
 
 #include <librmcs/client/cboard.hpp>
 
@@ -29,13 +26,6 @@ public:
   : librmcs::client::CBoard(usb_pid), owner_(owner), transmit_buffer_(*this, 16) {}
 
   bool send_frame(const CanFrame & frame) {
-    if (frame.can_id == 0x38) {
-      std::printf(
-        "[librmcs_hardware] TX bus=%s can_id=0x%03X can_data=0x%016llX\n",
-        frame.can_bus == CanBus::Can1 ? "can1" : "can2", frame.can_id,
-        static_cast<unsigned long long>(frame.can_data));
-      std::fflush(stdout);
-    }
     const bool queued = frame.can_bus == CanBus::Can1
                           ? transmit_buffer_.add_can1_transmission(frame.can_id, frame.can_data)
                           : transmit_buffer_.add_can2_transmission(frame.can_id, frame.can_data);
@@ -84,7 +74,7 @@ LibrmcsRobotDriver::LibrmcsRobotDriver(
 
 LibrmcsRobotDriver::~LibrmcsRobotDriver() { stop(); }
 
-void LibrmcsRobotDriver::start() {
+void LibrmcsRobotDriver::start(bool enable_on_start) {
   std::scoped_lock lock(mutex_);
   if (running_) {
     return;
@@ -106,8 +96,10 @@ void LibrmcsRobotDriver::start() {
 
   watchdog_thread_ = std::thread([this]() { watchdog_loop(); });
 
-  send_activation_frames_locked();
-  send_startup_frames_locked();
+  if (enable_on_start) {
+    send_activation_frames_locked();
+    send_startup_frames_locked();
+  }
 }
 
 void LibrmcsRobotDriver::stop() {
@@ -132,6 +124,25 @@ void LibrmcsRobotDriver::stop() {
 
   lock.lock();
   board_.reset();
+}
+
+bool LibrmcsRobotDriver::enable_motors() {
+  std::scoped_lock lock(mutex_);
+  if (!running_ || !board_) {
+    return false;
+  }
+  // 与 start() 行为保持一致：先激活序列，再发启动序列。
+  const bool ok1 = send_activation_frames_locked();
+  const bool ok2 = send_startup_frames_locked();
+  return ok1 && ok2;
+}
+
+bool LibrmcsRobotDriver::disable_motors() {
+  std::scoped_lock lock(mutex_);
+  if (!running_ || !board_) {
+    return false;
+  }
+  return send_stop_commands_locked();
 }
 
 bool LibrmcsRobotDriver::wait_for_feedback(std::chrono::milliseconds timeout) const {
@@ -202,11 +213,6 @@ bool LibrmcsRobotDriver::write_joint_efforts(std::span<const double> efforts) {
 
 void LibrmcsRobotDriver::handle_can_frame(CanBus can_bus, uint32_t can_id, uint64_t can_data) {
   std::scoped_lock lock(mutex_);
-  std::printf(
-    "[librmcs_hardware] RX bus=%s can_id=0x%03X can_data=0x%016llX\n",
-    can_bus == CanBus::Can1 ? "can1" : "can2", can_id,
-    static_cast<unsigned long long>(can_data));
-  std::fflush(stdout);
   for (auto & joint : joints_) {
     if (joint->accepts_feedback(can_bus, can_id)) {
       joint->parse_feedback(can_bus, can_id, can_data);

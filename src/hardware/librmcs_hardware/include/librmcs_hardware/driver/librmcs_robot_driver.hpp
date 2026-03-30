@@ -26,8 +26,13 @@ public:
   LibrmcsRobotDriver(const LibrmcsRobotDriver &) = delete;
   LibrmcsRobotDriver & operator=(const LibrmcsRobotDriver &) = delete;
 
-  void start();
+  void start(bool enable_on_start = true);
   void stop();
+
+  // 运行期间按需使能/失能电机（发送各电机的 enable/disable 序列）。
+  // 这些方法是线程安全的；若驱动未运行则返回 false。
+  bool enable_motors();
+  bool disable_motors();
 
   bool wait_for_feedback(std::chrono::milliseconds timeout) const;
   bool any_feedback_received() const;

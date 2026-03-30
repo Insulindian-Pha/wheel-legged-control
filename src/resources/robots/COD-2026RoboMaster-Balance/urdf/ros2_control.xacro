@@ -172,7 +172,7 @@
                 <param name="vendor">BM</param>
                 <param name="model">M1505B_111</param>
                 <param name="can_bus">can1</param>
-                <param name="can_id">0x9E</param>
+                <param name="can_id">0x0A1</param>
                 <param name="encoder_zero_point">0</param>
                 <param name="reduction_ratio">1</param>
                 <param name="reversed">false</param>
@@ -187,7 +187,7 @@
                 <param name="model">P1010B_111</param>
                 <param name="can_bus">can1</param>
                 <param name="can_id">0x52</param>
-                <param name="encoder_zero_point">0</param>
+                <param name="encoder_zero_point">7000</param>
                 <param name="reduction_ratio">1</param>
                 <param name="reversed">false</param>
                 <param name="multi_turn_angle">false</param>
@@ -214,7 +214,7 @@
                 <param name="vendor">BM</param>
                 <param name="model">M1505B_111</param>
                 <param name="can_bus">can1</param>
-                <param name="can_id">0x9A</param>
+                <param name="can_id">0x0A2</param>
                 <param name="encoder_zero_point">0</param>
                 <param name="reduction_ratio">1</param>
                 <param name="reversed">false</param>

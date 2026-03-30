@@ -21,6 +21,10 @@ private:
     control_input_msgs::msg::Inputs inputs_;
     rclcpp::Publisher<control_input_msgs::msg::Inputs>::SharedPtr publisher_;
     rclcpp::Subscription<sensor_msgs::msg::Joy>::SharedPtr subscription_;
+
+    bool prev_start_btn_{false};
+    bool prev_stop_btn_{false};
+    bool start_latched_{false};
 };
 
 

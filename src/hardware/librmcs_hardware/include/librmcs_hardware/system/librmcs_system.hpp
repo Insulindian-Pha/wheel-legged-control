@@ -1,8 +1,10 @@
 #pragma once
 
 #include <chrono>
+#include <atomic>
 #include <memory>
 #include <string>
+#include <thread>
 #include <unordered_map>
 #include <vector>
 
@@ -10,8 +12,12 @@
 #include <hardware_interface/system_interface.hpp>
 #include <hardware_interface/types/hardware_interface_return_values.hpp>
 #include <hardware_interface/version.h>
+#include <rclcpp/executors/single_threaded_executor.hpp>
 #include <rclcpp/logger.hpp>
+#include <rclcpp/node.hpp>
 #include <rclcpp_lifecycle/state.hpp>
+
+#include <control_input_msgs/msg/inputs.hpp>
 
 #include "librmcs_hardware/driver/librmcs_robot_driver.hpp"
 
@@ -60,6 +66,13 @@ private:
   std::vector<double> hw_commands_;
   std::unique_ptr<LibrmcsRobotDriver> driver_;
   rclcpp::Logger logger_;
+
+  std::atomic<bool> motors_enabled_{false};
+
+  std::shared_ptr<rclcpp::Node> input_node_;
+  rclcpp::executors::SingleThreadedExecutor input_executor_;
+  std::thread input_spin_thread_;
+  rclcpp::Subscription<control_input_msgs::msg::Inputs>::SharedPtr input_sub_;
 };
 
 }  // namespace librmcs_hardware

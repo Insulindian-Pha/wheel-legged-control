@@ -30,6 +30,16 @@ LibrmcsSystem::LibrmcsSystem()
 : logger_(rclcpp::get_logger("librmcs_hardware")) {}
 
 LibrmcsSystem::~LibrmcsSystem() {
+  if (input_node_) {
+    try {
+      input_executor_.remove_node(input_node_);
+    } catch (...) {
+    }
+  }
+  if (input_spin_thread_.joinable()) {
+    input_executor_.cancel();
+    input_spin_thread_.join();
+  }
   if (driver_) {
     driver_->stop();
   }
@@ -160,8 +170,41 @@ hardware_interface::CallbackReturn LibrmcsSystem::on_activate(
 {
   try {
     driver_ = std::make_unique<LibrmcsRobotDriver>(usb_pid_, command_timeout_, joint_configs_);
-    driver_->start();
-    if (!driver_->wait_for_feedback(startup_timeout_)) {
+    // 只有收到 start 指令才发送 enable（默认不上电）。
+    driver_->start(false);
+    motors_enabled_.store(false);
+
+    if (!input_node_) {
+      input_node_ = std::make_shared<rclcpp::Node>("librmcs_hardware_input_gate");
+      input_sub_ = input_node_->create_subscription<control_input_msgs::msg::Inputs>(
+        "control_input", rclcpp::QoS(10),
+        [this](const control_input_msgs::msg::Inputs::SharedPtr msg) {
+          // start 由发布端锁存（按下 START 后保持 1，按下 STOP 置 0）。
+          // 此处只在状态切换时发送一次使能/失能（stop 优先）。
+          if (msg->stop) {
+            if (driver_) {
+              driver_->disable_motors();
+            }
+            motors_enabled_.store(false);
+          } else if (msg->start && !motors_enabled_.load()) {
+            if (driver_) {
+              driver_->enable_motors();
+            }
+            motors_enabled_.store(true);
+          } else if (!msg->start && motors_enabled_.load()) {
+            if (driver_) {
+              driver_->disable_motors();
+            }
+            motors_enabled_.store(false);
+          }
+        });
+
+      input_executor_.add_node(input_node_);
+      input_spin_thread_ = std::thread([this]() { input_executor_.spin(); });
+    }
+
+    // 注意：默认不使能电机，可能不会有反馈；因此这里不强制等待反馈。
+    if (motors_enabled_.load() && !driver_->wait_for_feedback(startup_timeout_)) {
       const auto missing_joint_names = driver_->missing_feedback_joint_names();
       const auto missing_summary = join_names(missing_joint_names);
       if (!allow_partial_feedback_) {
@@ -200,11 +243,25 @@ hardware_interface::CallbackReturn LibrmcsSystem::on_activate(
 hardware_interface::CallbackReturn LibrmcsSystem::on_deactivate(
   const rclcpp_lifecycle::State & /*previous_state*/)
 {
+  motors_enabled_.store(false);
   if (driver_) {
     std::fill(hw_commands_.begin(), hw_commands_.end(), 0.0);
     driver_->write_joint_efforts(hw_commands_);
     driver_->stop();
     driver_.reset();
+  }
+
+  if (input_node_) {
+    try {
+      input_executor_.remove_node(input_node_);
+    } catch (...) {
+    }
+    input_node_.reset();
+    input_sub_.reset();
+  }
+  if (input_spin_thread_.joinable()) {
+    input_executor_.cancel();
+    input_spin_thread_.join();
   }
 
   return hardware_interface::CallbackReturn::SUCCESS;
@@ -236,6 +293,12 @@ hardware_interface::return_type LibrmcsSystem::write(
 {
   if (!driver_) {
     return hardware_interface::return_type::ERROR;
+  }
+
+  if (!motors_enabled_.load()) {
+    // 未使能时不下发力矩命令（disable 指令由 stop 上升沿触发发送）
+    std::fill(hw_commands_.begin(), hw_commands_.end(), 0.0);
+    return hardware_interface::return_type::OK;
   }
 
   return driver_->write_joint_efforts(hw_commands_)
