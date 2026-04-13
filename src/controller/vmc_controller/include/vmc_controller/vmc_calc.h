@@ -1,3 +1,4 @@
+
 #ifndef VMC_CALC_H
 #define VMC_CALC_H
 
@@ -101,19 +102,10 @@ private:
   double last_L0;
   double last_d_L0;
 
-  // 闭链求解内部状态（被动关节 warm-start）
-  double passive_phi2_;
-  double passive_phi3_;
-
   double FN;  // 支持力
 
   uint8_t first_flag;
   uint8_t leg_flag;  // 腿长完成标志
-
-  void calcKinematicsCommon(bool is_right_leg, double pitch, double pitch_gyro, double dt);
-  bool calcKinematicsPinocchio(double& solved_phi2, double& solved_phi3, double& out_l0, double& out_phi0,
-                               double& out_d_l0_d_phi1, double& out_d_l0_d_phi4, double& out_d_phi0_d_phi1,
-                               double& out_d_phi0_d_phi4);
 };
 
 }  // namespace vmc_controller

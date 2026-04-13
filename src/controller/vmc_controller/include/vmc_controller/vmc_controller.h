@@ -18,6 +18,7 @@
 #include "rclcpp_lifecycle/state.hpp"
 #include "sensor_msgs/msg/imu.hpp"
 #include "std_msgs/msg/float64_multi_array.hpp"
+#include "control_input_msgs/msg/inputs.hpp"
 #include "vmc_controller/vmc_calc.h"
 #include "vmc_controller/msg/vmc_state.hpp"
 #include "pid_ros.hpp"
@@ -95,6 +96,17 @@ protected:
   double left_desired_theta_;
   double right_desired_theta_;
 
+  // L0：desired_* 为初值；ry 对累加目标积分 d(l0_sp)/dt = ry * l0_ry_rate，再限幅到 [l0_min, l0_max]
+  double left_desired_l0_;
+  double right_desired_l0_;
+  double l0_ry_rate_;  // m/s per unit ry
+  double l0_target_min_;
+  double l0_target_max_;
+  double left_l0_target_accum_;
+  double right_l0_target_accum_;
+  double control_input_ry_;
+  std::string control_input_topic_;
+
   // Parameters
   std::string imu_topic_;
   std::string force_command_topic_;
@@ -122,6 +134,7 @@ protected:
   // Subscriptions (for IMU and force commands)
   rclcpp::Subscription<sensor_msgs::msg::Imu>::SharedPtr imu_subscription_;
   rclcpp::Subscription<std_msgs::msg::Float64MultiArray>::SharedPtr force_command_subscription_;
+  rclcpp::Subscription<control_input_msgs::msg::Inputs>::SharedPtr control_input_subscription_;
 
   // Publisher (for VMC state)
   rclcpp::Publisher<vmc_controller::msg::VMCState>::SharedPtr vmc_state_publisher_;
@@ -129,6 +142,7 @@ protected:
   // Callbacks
   void imu_callback(const sensor_msgs::msg::Imu::SharedPtr msg);
   void force_command_callback(const std_msgs::msg::Float64MultiArray::SharedPtr msg);
+  void control_input_callback(const control_input_msgs::msg::Inputs::SharedPtr msg);
   double quaternion_to_pitch(double x, double y, double z, double w);
   void extract_pitch_from_imu(const sensor_msgs::msg::Imu::SharedPtr msg, double& pitch, double& pitch_gyro);
 

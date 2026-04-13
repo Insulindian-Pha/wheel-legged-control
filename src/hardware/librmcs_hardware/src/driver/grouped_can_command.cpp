@@ -1,9 +1,21 @@
 #include "librmcs_hardware/driver/grouped_can_command.hpp"
 
-#include <bit>
+#include <cstdint>
 #include <stdexcept>
 
 namespace librmcs_hardware {
+
+namespace {
+
+uint64_t pack_data_array_le64(const std::array<uint8_t, 8> & data) {
+  uint64_t v = 0;
+  for (std::size_t i = 0; i < 8; ++i) {
+    v |= static_cast<uint64_t>(data[i]) << (8 * i);
+  }
+  return v;
+}
+
+}  // namespace
 
 void GroupedCanCommandAggregator::clear() {
   groups_.clear();
@@ -41,7 +53,7 @@ std::vector<CanFrame> GroupedCanCommandAggregator::flush() const {
   std::vector<CanFrame> frames;
   frames.reserve(groups_.size());
   for (const auto & [key, state] : groups_) {
-    frames.push_back(CanFrame{key.tx_can_id, std::bit_cast<uint64_t>(state.data), key.can_bus});
+    frames.push_back(CanFrame{key.tx_can_id, pack_data_array_le64(state.data), key.can_bus});
   }
   return frames;
 }

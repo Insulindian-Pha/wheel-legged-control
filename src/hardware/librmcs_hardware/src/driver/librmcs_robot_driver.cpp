@@ -212,7 +212,12 @@ bool LibrmcsRobotDriver::write_joint_efforts(std::span<const double> efforts) {
 }
 
 void LibrmcsRobotDriver::handle_can_frame(CanBus can_bus, uint32_t can_id, uint64_t can_data) {
-  std::scoped_lock lock(mutex_);
+  // Never block libusb event thread on this mutex. If command/startup path is holding
+  // the lock, we drop this feedback frame to keep transfer callbacks flowing.
+  std::unique_lock<std::mutex> lock(mutex_, std::try_to_lock);
+  if (!lock.owns_lock()) {
+    return;
+  }
   for (auto & joint : joints_) {
     if (joint->accepts_feedback(can_bus, can_id)) {
       joint->parse_feedback(can_bus, can_id, can_data);

@@ -81,27 +81,11 @@ ament_target_dependencies(${PROJECT_NAME}_plugin
 
 set_target_properties(${PROJECT_NAME}_plugin PROPERTIES OUTPUT_NAME ${PROJECT_NAME})
 
-add_executable(librmcs_can_echo tools/librmcs_can_echo.cpp tools/can_echo_board.cpp)
-target_include_directories(librmcs_can_echo PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/tools)
-target_link_libraries(librmcs_can_echo PRIVATE ${LIBRMCS_TARGET} PkgConfig::LIBUSB Threads::Threads)
-
-add_executable(librmcs_can_bridge_node src/tools/librmcs_can_bridge_node.cpp tools/can_echo_board.cpp)
-target_include_directories(librmcs_can_bridge_node PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/tools)
-ament_target_dependencies(librmcs_can_bridge_node rclcpp)
-target_link_libraries(librmcs_can_bridge_node ${LIBRMCS_TARGET} PkgConfig::LIBUSB Threads::Threads)
-rosidl_get_typesupport_target(cpp_typesupport_target ${PROJECT_NAME} "rosidl_typesupport_cpp")
-target_link_libraries(librmcs_can_bridge_node "${cpp_typesupport_target}")
-
 pluginlib_export_plugin_description_file(hardware_interface librmcs_hardware_plugin.xml)
 
 install(
   TARGETS ${PROJECT_NAME}_plugin
   LIBRARY DESTINATION lib
-)
-
-install(
-  TARGETS librmcs_can_echo librmcs_can_bridge_node
-  DESTINATION lib/${PROJECT_NAME}
 )
 
 install(

@@ -24,6 +24,14 @@ VMCController::VMCController()
   , enable_anti_split_(true)
   , left_desired_theta_(0.0)
   , right_desired_theta_(0.0)
+  , left_desired_l0_(0.2)
+  , right_desired_l0_(0.2)
+  , l0_ry_rate_(0.12)
+  , l0_target_min_(0.1)
+  , l0_target_max_(0.35)
+  , left_l0_target_accum_(0.2)
+  , right_l0_target_accum_(0.2)
+  , control_input_ry_(0.0)
   , left_front_joint_offset_(0.0)
   , left_rear_joint_offset_(0.0)
   , right_front_joint_offset_(0.0)
@@ -51,6 +59,7 @@ controller_interface::CallbackReturn VMCController::on_init()
     auto_declare<std::string>("imu_topic", "/imu/data");
     auto_declare<std::string>("force_command_topic", "/vmc_controller/force_command");
     auto_declare<std::string>("vmc_state_topic", "/vmc_controller/vmc_state");
+    auto_declare<std::string>("control_input_topic", "/control_input");
     auto_declare<double>("max_torque", 90.0);
 
     // VMC杆长参数
@@ -66,9 +75,12 @@ controller_interface::CallbackReturn VMCController::on_init()
     auto_declare<double>("right_F0", 0.0);
     auto_declare<double>("right_Tp", 0.0);
 
-    // PID控制L0相关参数
-    auto_declare<double>("left_desired_l0", 0.2);   // 期望的左腿L0值（米）
-    auto_declare<double>("right_desired_l0", 0.2);  // 期望的右腿L0值（米）
+    // PID控制L0：累加目标初值 + ry 积分（d(l0_sp)/dt = ry * l0_ry_rate）
+    auto_declare<double>("left_desired_l0", 0.2);   // 左腿 L0 设定初值（米），activate 时重置累加器
+    auto_declare<double>("right_desired_l0", 0.2);  // 右腿 L0 设定初值（米）
+    auto_declare<double>("l0_ry_rate", 0.12);     // ry 积分速率 (m/s per unit ry，ry=1 时每秒改变量)
+    auto_declare<double>("l0_min", 0.1);            // L0 设定值下限 (m)
+    auto_declare<double>("l0_max", 0.35);           // L0 设定值上限 (m)
 
     // PID控制theta相关参数
     auto_declare<double>("left_desired_theta",
@@ -117,6 +129,7 @@ controller_interface::CallbackReturn VMCController::on_configure(const rclcpp_li
   imu_topic_ = get_node()->get_parameter("imu_topic").as_string();
   force_command_topic_ = get_node()->get_parameter("force_command_topic").as_string();
   vmc_state_topic_ = get_node()->get_parameter("vmc_state_topic").as_string();
+  control_input_topic_ = get_node()->get_parameter("control_input_topic").as_string();
   max_torque_ = get_node()->get_parameter("max_torque").as_double();
 
   l1_ = get_node()->get_parameter("l1").as_double();
@@ -131,7 +144,22 @@ controller_interface::CallbackReturn VMCController::on_configure(const rclcpp_li
   right_Tp_ = get_node()->get_parameter("right_Tp").as_double();
 
   // 读取PID控制相关参数
-  // L0 目标由 pid_gains.l0_control.*.target 提供；这里只读取 theta 目标。
+  left_desired_l0_ = get_node()->get_parameter("left_desired_l0").as_double();
+  right_desired_l0_ = get_node()->get_parameter("right_desired_l0").as_double();
+  l0_ry_rate_ = get_node()->get_parameter("l0_ry_rate").as_double();
+  l0_target_min_ = get_node()->get_parameter("l0_min").as_double();
+  l0_target_max_ = get_node()->get_parameter("l0_max").as_double();
+  if (l0_target_min_ > l0_target_max_)
+  {
+    std::swap(l0_target_min_, l0_target_max_);
+    RCLCPP_WARN(get_node()->get_logger(), "l0_min > l0_max, values were swapped");
+  }
+  RCLCPP_INFO(get_node()->get_logger(), "L0 target clamp: [%.4f, %.4f] m", l0_target_min_, l0_target_max_);
+  RCLCPP_INFO(get_node()->get_logger(), "L0 ry integrator rate: %.4f m/s per unit ry", l0_ry_rate_);
+
+  left_l0_target_accum_ = std::clamp(left_desired_l0_, l0_target_min_, l0_target_max_);
+  right_l0_target_accum_ = std::clamp(right_desired_l0_, l0_target_min_, l0_target_max_);
+
   left_desired_theta_ = get_node()->get_parameter("left_desired_theta").as_double();
   right_desired_theta_ = get_node()->get_parameter("right_desired_theta").as_double();
 
@@ -183,12 +211,16 @@ controller_interface::CallbackReturn VMCController::on_configure(const rclcpp_li
   force_command_subscription_ = get_node()->create_subscription<std_msgs::msg::Float64MultiArray>(
       force_command_topic_, 10, std::bind(&VMCController::force_command_callback, this, std::placeholders::_1));
 
+  control_input_subscription_ = get_node()->create_subscription<control_input_msgs::msg::Inputs>(
+      control_input_topic_, 10, std::bind(&VMCController::control_input_callback, this, std::placeholders::_1));
+
   // Create publisher for VMC state
   vmc_state_publisher_ = get_node()->create_publisher<vmc_controller::msg::VMCState>(vmc_state_topic_, 10);
 
   RCLCPP_INFO(get_node()->get_logger(), "VMC Controller configured");
   RCLCPP_INFO(get_node()->get_logger(), "Subscribing to IMU: %s", imu_topic_.c_str());
   RCLCPP_INFO(get_node()->get_logger(), "Subscribing to force commands: %s", force_command_topic_.c_str());
+  RCLCPP_INFO(get_node()->get_logger(), "Subscribing to control_input (ry -> L0 integrator): %s", control_input_topic_.c_str());
   RCLCPP_INFO(get_node()->get_logger(), "Publishing VMC state to: %s", vmc_state_topic_.c_str());
   RCLCPP_INFO(get_node()->get_logger(), "Max torque: %.2f Nm", max_torque_);
   RCLCPP_INFO(get_node()->get_logger(), "VMC parameters: l1=%.3f, l2=%.3f, l3=%.3f, l4=%.3f, l5=%.3f", l1_, l2_, l3_,
@@ -318,6 +350,9 @@ controller_interface::CallbackReturn VMCController::on_activate(const rclcpp_lif
     return controller_interface::CallbackReturn::ERROR;
   }
 
+  left_l0_target_accum_ = std::clamp(left_desired_l0_, l0_target_min_, l0_target_max_);
+  right_l0_target_accum_ = std::clamp(right_desired_l0_, l0_target_min_, l0_target_max_);
+
   last_update_time_ = get_node()->now();
 
   RCLCPP_INFO(get_node()->get_logger(), "VMC Controller activated");
@@ -390,17 +425,24 @@ controller_interface::return_type VMCController::update(const rclcpp::Time& time
   right_leg_.setPhi1(right_phi1);
   right_leg_.setPhi4(right_phi4);
 
-  // 先更新当前周期运动学状态，再读取 L0/theta 给 PID
-  left_leg_.calc1Left(pitch_correct, pitch_gyro_correct, dt);
-  right_leg_.calc1Right(pitch_correct, pitch_gyro_correct, dt);
+  // Calculate VMC for legs (first pass to get L0 and theta)
+  // Note: We need to set F0 first (use previous value or 0) to calculate theta
 
-  // Get current L0 and theta values (current cycle)
+  // Get current L0 and theta values
   double left_current_l0 = left_leg_.getL0();
   double right_current_l0 = right_leg_.getL0();
   double left_current_theta = left_leg_.getTheta();
   double right_current_theta = right_leg_.getTheta();
 
-  // L0 target uses pid_gains.l0_control.*.target
+  // L0 累加控制：ry 积分改变设定值，再限幅
+  {
+    left_l0_target_accum_ += control_input_ry_ * l0_ry_rate_ * dt;
+    right_l0_target_accum_ += control_input_ry_ * l0_ry_rate_ * dt;
+    left_l0_target_accum_ = std::clamp(left_l0_target_accum_, l0_target_min_, l0_target_max_);
+    right_l0_target_accum_ = std::clamp(right_l0_target_accum_, l0_target_min_, l0_target_max_);
+    left_leg_l0_pid_->get_pid().setTarget(static_cast<float>(left_l0_target_accum_));
+    right_leg_l0_pid_->get_pid().setTarget(static_cast<float>(right_l0_target_accum_));
+  }
 
   // Calculate F0 using PID with L0 as feedback
   left_F0_ = left_leg_l0_pid_->update(left_current_l0, time);
@@ -431,7 +473,12 @@ controller_interface::return_type VMCController::update(const rclcpp::Time& time
   left_leg_.setTp(left_Tp_);
   right_leg_.setTp(right_Tp_);
 
+  // Recalculate VMC with updated F0 and Tp
+  // Apply pitch polarity (reuse the adjusted values from above)
+  left_leg_.calc1Left(pitch_correct, pitch_gyro_correct, dt);
   left_leg_.calc2();
+
+  right_leg_.calc1Right(pitch_correct, pitch_gyro_correct, dt);
   right_leg_.calc2();
 
   // Clamp and set torques
@@ -448,10 +495,10 @@ controller_interface::return_type VMCController::update(const rclcpp::Time& time
   double right_rear_torque = right_rear_joint_invert_sign_ * right_rear_torque_raw;
 
   // Set command values
-  // left_front_joint_cmd_[0].get().set_value(left_front_torque);
-  // left_rear_joint_cmd_[0].get().set_value(left_rear_torque);
-  // right_front_joint_cmd_[0].get().set_value(right_front_torque);
-  // right_rear_joint_cmd_[0].get().set_value(right_rear_torque);
+  left_front_joint_cmd_[0].get().set_value(left_front_torque);
+  left_rear_joint_cmd_[0].get().set_value(left_rear_torque);
+  right_front_joint_cmd_[0].get().set_value(right_front_torque);
+  right_rear_joint_cmd_[0].get().set_value(right_rear_torque);
 
   // Publish VMC state
   publish_vmc_state(left_front_torque_raw, left_rear_torque_raw, right_front_torque_raw, right_rear_torque_raw);
@@ -466,6 +513,11 @@ void VMCController::imu_callback(const sensor_msgs::msg::Imu::SharedPtr msg)
   received_imu_ = true;
   extract_pitch_from_imu(msg, pitch_, pitch_gyro_);
   last_imu_time_ = msg->header.stamp;
+}
+
+void VMCController::control_input_callback(const control_input_msgs::msg::Inputs::SharedPtr msg)
+{
+  control_input_ry_ = static_cast<double>(msg->ry);
 }
 
 void VMCController::force_command_callback(const std_msgs::msg::Float64MultiArray::SharedPtr msg)

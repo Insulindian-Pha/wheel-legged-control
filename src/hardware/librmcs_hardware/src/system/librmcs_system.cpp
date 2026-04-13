@@ -1,8 +1,10 @@
 #include "librmcs_hardware/system/librmcs_system.hpp"
 
 #include <algorithm>
+#include <set>
 #include <sstream>
 #include <stdexcept>
+#include <utility>
 
 #include <hardware_interface/handle.hpp>
 #include <hardware_interface/types/hardware_interface_type_values.hpp>
@@ -84,6 +86,7 @@ LibrmcsSystem::on_init(const hardware_interface::HardwareComponentInterfaceParam
   joint_configs_.reserve(joint_count);
 
   try {
+    std::set<std::pair<CanBus, uint32_t>> used_can_ids;
     for (const auto & joint : info_.joints) {
       if (joint.command_interfaces.size() != 1 ||
           joint.command_interfaces[0].name != hardware_interface::HW_IF_EFFORT) {
@@ -126,6 +129,15 @@ LibrmcsSystem::on_init(const hardware_interface::HardwareComponentInterfaceParam
       config.reduction_ratio = std::stod(get_parameter(joint.parameters, "reduction_ratio", "0.0"));
       config.reversed = parse_bool(get_parameter(joint.parameters, "reversed", "false"));
       config.multi_turn_angle = parse_bool(get_parameter(joint.parameters, "multi_turn_angle", "false"));
+
+      const auto can_key = std::make_pair(config.can_bus, config.can_id);
+      if (!used_can_ids.insert(can_key).second) {
+        RCLCPP_ERROR(
+          logger_,
+          "Duplicate CAN id 0x%X on the same bus as another joint — check URDF for '%s'.",
+          config.can_id, joint.name.c_str());
+        return hardware_interface::CallbackReturn::ERROR;
+      }
 
       joint_configs_.push_back(config);
     }

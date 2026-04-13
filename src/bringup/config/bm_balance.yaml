@@ -1,0 +1,161 @@
+controller_manager:
+  ros__parameters:
+    update_rate: 200
+
+    joint_state_broadcaster:
+      type: joint_state_broadcaster/JointStateBroadcaster
+
+    vmc_controller:
+      type: vmc_controller/VMCController
+
+    lqr_controller:
+      type: lqr_controller/LQRController
+
+vmc_controller:
+  ros__parameters:
+    # 关节名称配置
+    left_front_joint_name: "Left_front_joint"
+    left_rear_joint_name: "Left_rear_joint"
+    right_front_joint_name: "Right_front_joint"
+    right_rear_joint_name: "Right_rear_joint"
+
+    # 话题配置
+    imu_topic: "/imu_broadcaster/imu"
+    force_command_topic: "/vmc_controller/force_command"
+
+    # 关闭防劈岔补偿（否则需要提供 pid_gains.anti_split.* 一整套PID参数）
+    enable_anti_split: false
+
+    # 控制参数
+    max_torque: 90.0 # 最大力矩限制 (Nm)
+
+    # VMC杆长参数 (单位: m)
+    l1: 0.15
+    l2: 0.27
+    l3: 0.27
+    l4: 0.15
+    l5: 0.15
+
+    # F0和Tp默认值
+    left_F0: 0.0
+    left_Tp: 0.0
+    right_F0: 0.0
+    right_Tp: 0.0
+
+    # 关节初始角度偏置 (单位: rad)
+    # 这些值将被加到反馈角度中，使初始角度成为0点
+    left_front_joint_offset: 0.0 # 左前关节初始角度偏置
+    left_rear_joint_offset: 0.0 # 左后关节初始角度偏置
+    right_front_joint_offset: 0.0 # 右前关节初始角度偏置
+    right_rear_joint_offset: 0.0 # 右后关节初始角度偏置
+
+    # 关节角度取反配置（用于匹配VMC坐标系）
+    # 1.0: 不取反, -1.0: 取反
+    left_front_joint_invert_sign: 1.0
+    left_rear_joint_invert_sign: -1.0
+    right_front_joint_invert_sign: 1.0
+    right_rear_joint_invert_sign: -1.0
+
+    # 期望的默认L0 (m)
+    left_desired_l0: 0.15
+    right_desired_l0: 0.15
+
+    # L0 累加目标限幅 (m)；ry 以速率 l0_ry_rate 积分，摇杆回中则保持当前腿长设定
+    l0_min: 0.18
+    l0_max: 0.32
+    # ry 积分速率 (m/s per unit ry)，例如 0.12 表示 ry=1 时每秒约 +0.12m
+    l0_ry_rate: 0.12
+
+    # PID参数配置
+    pid_gains:
+      l0_control:
+        # 左腿pid
+        left_leg:
+          target: 0.35
+          kp: -100.0
+          ki: 0.0
+          kd: -10.0
+          u_clamp_max: 0.0
+          u_clamp_min: -0.0
+          i_clamp_max: 5.0
+          i_separation_threshold: 0.0
+        # 右腿pid
+        right_leg:
+          target: 0.35
+          kp: 500.0
+          ki: 0.0
+          kd: 20.0
+          u_clamp_max: 50.0
+          u_clamp_min: -50.0
+          i_clamp_max: 5.0
+          i_separation_threshold: 0.0
+      theta_control:
+        left_leg:
+          target: 0.0 # 期望的theta值（弧度）
+          kp: -10.0
+          ki: 0.0
+          kd: -5.0
+          u_clamp_max: 50.0
+          u_clamp_min: -50.0
+          i_clamp_max: 5.0
+          i_separation_threshold: 0.0
+        right_leg:
+          target: 0.0 # 期望的theta值（弧度）
+          kp: -10.0
+          ki: 0.0
+          kd: -5.0
+          u_clamp_max: 50.0
+          u_clamp_min: -50.0
+          i_clamp_max: 5.0
+          i_separation_threshold: 0.0
+
+lqr_controller:
+  ros__parameters:
+    # 轮毂电机关节名称
+    left_wheel_joint_name: "Left_Wheel_joint"
+    right_wheel_joint_name: "Right_Wheel_joint"
+
+    # 话题配置
+    vmc_state_topic: "/vmc_controller/vmc_state"
+    imu_topic: "/imu/data"  # 非空则用 IMU 提供 pitch/pitch_gyro/yaw/yaw_gyro
+    force_command_topic: "/vmc_controller/force_command"
+
+    # 物理参数
+    wheel_radius: 0.06 # 轮半径 (m)
+    max_wheel_torque: 4.0 # 最大轮毂电机力矩 (Nm)
+
+    # 期望值
+    x_set: 0.0 # 期望位置 (m)
+    v_set: 0.0 # 期望速度 (m/s)
+
+    # 左腿LQR增益矩阵 (12个值)
+    # K[0-5]: 轮毂电机力矩增益 [theta, d_theta, x_err, v_err, pitch, pitch_gyro]
+    # K[6-11]: Tp增益 [theta, d_theta, x_err, v_err, pitch, pitch_gyro]
+    left_lqr_gains:
+      0: -2.1954 # theta -> wheel torque
+      1: -0.2044 # d_theta -> wheel torque
+      2: -0.8826 # x_err -> wheel torque
+      3: -1.3245 # v_err -> wheel torque
+      4: 1.2784 # pitch -> wheel torque
+      5: 0.1112 # pitch_gyro -> wheel torque
+      6: 2.5538 # theta -> Tp
+      7: 0.2718 # d_theta -> Tp
+      8: 1.5728 # x_err -> Tp
+      9: 2.2893 # v_err -> Tp
+      10: 12.1973 # pitch -> Tp
+      11: 0.4578 # pitch_gyro -> Tp
+
+    # 右腿LQR增益矩阵 (12个值)
+    right_lqr_gains:
+      0: -2.1954 # theta -> wheel torque
+      1: -0.2044 # d_theta -> wheel torque
+      2: -0.8826 # x_err -> wheel torque
+      3: -1.3245 # v_err -> wheel torque
+      4: 1.2784 # pitch -> wheel torque
+      5: 0.1112 # pitch_gyro -> wheel torque
+      6: 2.5538 # theta -> Tp
+      7: 0.2718 # d_theta -> Tp
+      8: 1.5728 # x_err -> Tp
+      9: 2.2893 # v_err -> Tp
+      10: 12.1973 # pitch -> Tp
+      11: 0.4578 # pitch_gyro -> Tp

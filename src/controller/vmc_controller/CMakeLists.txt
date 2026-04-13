@@ -12,6 +12,7 @@ find_package(ament_cmake REQUIRED)
 find_package(rclcpp REQUIRED)
 find_package(sensor_msgs REQUIRED)
 find_package(std_msgs REQUIRED)
+find_package(control_input_msgs REQUIRED)
 find_package(controller_interface REQUIRED)
 find_package(hardware_interface REQUIRED)
 find_package(pluginlib REQUIRED)
@@ -45,6 +46,7 @@ ament_target_dependencies(
         rclcpp
         sensor_msgs
         std_msgs
+        control_input_msgs
         controller_interface
         hardware_interface
         pluginlib
@@ -86,6 +88,6 @@ if (BUILD_TESTING)
     ament_lint_auto_find_test_dependencies()
 endif ()
 
-ament_export_dependencies(rclcpp sensor_msgs std_msgs controller_interface hardware_interface pluginlib rclcpp_lifecycle pid_controller rosidl_default_runtime)
+ament_export_dependencies(rclcpp sensor_msgs std_msgs control_input_msgs controller_interface hardware_interface pluginlib rclcpp_lifecycle pid_controller rosidl_default_runtime)
 ament_package()
 
