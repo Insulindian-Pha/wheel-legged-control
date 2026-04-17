@@ -6,6 +6,7 @@
 #include <librmcs/client/cboard.hpp>
 
 #include "librmcs_hardware/driver/grouped_can_command.hpp"
+#include "librmcs_hardware/devices/bmi088_device.hpp"
 #include "librmcs_hardware/devices/motor_device_base.hpp"
 #include "librmcs_hardware/devices/motor_device_factory.hpp"
 
@@ -25,14 +26,29 @@ public:
   RobotBoard(LibrmcsRobotDriver & owner, int32_t usb_pid)
   : librmcs::client::CBoard(usb_pid), owner_(owner), transmit_buffer_(*this, 16) {}
 
+  bool queue_frame(const CanFrame & frame) {
+    return frame.can_bus == CanBus::Can1
+             ? transmit_buffer_.add_can1_transmission(frame.can_id, frame.can_data)
+             : transmit_buffer_.add_can2_transmission(frame.can_id, frame.can_data);
+  }
+
+  bool flush_queued_frames() { return transmit_buffer_.trigger_transmission(); }
+
   bool send_frame(const CanFrame & frame) {
-    const bool queued = frame.can_bus == CanBus::Can1
-                          ? transmit_buffer_.add_can1_transmission(frame.can_id, frame.can_data)
-                          : transmit_buffer_.add_can2_transmission(frame.can_id, frame.can_data);
-    return queued && transmit_buffer_.trigger_transmission();
+    return queue_frame(frame) && flush_queued_frames();
   }
 
 private:
+  void accelerometer_receive_callback(int16_t x, int16_t y, int16_t z) override
+  {
+    owner_.handle_accelerometer_data(x, y, z);
+  }
+
+  void gyroscope_receive_callback(int16_t x, int16_t y, int16_t z) override
+  {
+    owner_.handle_gyroscope_data(x, y, z);
+  }
+
   void can1_receive_callback(
     uint32_t can_id, uint64_t can_data, bool is_extended_can_id, bool is_remote_transmission,
     uint8_t can_data_length) override
@@ -67,6 +83,7 @@ LibrmcsRobotDriver::LibrmcsRobotDriver(
 {
   joints_.reserve(joint_configs.size());
   command_efforts_.assign(joint_configs.size(), 0.0);
+  bmi088_device_ = std::make_unique<Bmi088Device>();
   for (const auto & joint_config : joint_configs) {
     joints_.push_back(make_motor_device(joint_config));
   }
@@ -197,6 +214,23 @@ std::vector<JointState> LibrmcsRobotDriver::read_joint_states() const {
   return states;
 }
 
+bool LibrmcsRobotDriver::read_imu_raw_data(ImuRawData & imu_raw_data) const {
+  if (!bmi088_device_) {
+    return false;
+  }
+  Bmi088Device::ImuRawData raw_data;
+  if (!bmi088_device_->read_raw_data(raw_data)) {
+    return false;
+  }
+  imu_raw_data.acc_x = raw_data.acc_x;
+  imu_raw_data.acc_y = raw_data.acc_y;
+  imu_raw_data.acc_z = raw_data.acc_z;
+  imu_raw_data.gyro_x = raw_data.gyro_x;
+  imu_raw_data.gyro_y = raw_data.gyro_y;
+  imu_raw_data.gyro_z = raw_data.gyro_z;
+  return true;
+}
+
 bool LibrmcsRobotDriver::write_joint_efforts(std::span<const double> efforts) {
   std::scoped_lock lock(mutex_);
   if (!running_ || !board_ || efforts.size() != joints_.size()) {
@@ -224,6 +258,20 @@ void LibrmcsRobotDriver::handle_can_frame(CanBus can_bus, uint32_t can_id, uint6
       break;
     }
   }
+}
+
+void LibrmcsRobotDriver::handle_accelerometer_data(int16_t x, int16_t y, int16_t z) {
+  if (!bmi088_device_) {
+    return;
+  }
+  bmi088_device_->handle_accelerometer_data(x, y, z);
+}
+
+void LibrmcsRobotDriver::handle_gyroscope_data(int16_t x, int16_t y, int16_t z) {
+  if (!bmi088_device_) {
+    return;
+  }
+  bmi088_device_->handle_gyroscope_data(x, y, z);
 }
 
 void LibrmcsRobotDriver::watchdog_loop() {
@@ -312,18 +360,24 @@ bool LibrmcsRobotDriver::send_effort_commands_locked() {
 
   GroupedCanCommandAggregator grouped_commands;
   bool ok = true;
+  bool has_frame = false;
   for (std::size_t index = 0; index < joints_.size(); ++index) {
     const auto effort = command_efforts_[index];
     const auto & joint = joints_[index];
 
     grouped_commands.ingest(joint->build_grouped_command(effort));
     for (const auto & frame : joint->build_direct_command(effort)) {
-      ok = board_->send_frame(frame) && ok;
+      ok = board_->queue_frame(frame) && ok;
+      has_frame = true;
     }
   }
 
   for (const auto & frame : grouped_commands.flush()) {
-    ok = board_->send_frame(frame) && ok;
+    ok = board_->queue_frame(frame) && ok;
+    has_frame = true;
+  }
+  if (has_frame) {
+    ok = board_->flush_queued_frames() && ok;
   }
   last_command_send_ = std::chrono::steady_clock::now();
   return ok;

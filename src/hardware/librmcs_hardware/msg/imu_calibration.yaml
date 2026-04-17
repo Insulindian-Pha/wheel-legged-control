@@ -1,0 +1,8 @@
+# Auto-generated IMU calibration file.
+gyro_offset_x: -0.000288517923
+gyro_offset_y: -0.002359632736
+gyro_offset_z: 0.001508815575
+accel_scale: 1.002572242
+accel_offset_x: 0.01395330767
+accel_offset_y: -0.000669462589
+accel_offset_z: 0

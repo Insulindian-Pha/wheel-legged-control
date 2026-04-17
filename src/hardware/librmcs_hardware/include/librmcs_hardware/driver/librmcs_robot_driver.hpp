@@ -14,9 +14,20 @@
 namespace librmcs_hardware {
 
 class MotorDeviceBase;
+class Bmi088Device;
 
 class LibrmcsRobotDriver {
 public:
+  struct ImuRawData
+  {
+    int16_t acc_x{0};
+    int16_t acc_y{0};
+    int16_t acc_z{0};
+    int16_t gyro_x{0};
+    int16_t gyro_y{0};
+    int16_t gyro_z{0};
+  };
+
   LibrmcsRobotDriver(
     int32_t usb_pid,
     std::chrono::milliseconds command_timeout,
@@ -38,12 +49,15 @@ public:
   bool any_feedback_received() const;
   std::vector<std::string> missing_feedback_joint_names() const;
   std::vector<JointState> read_joint_states() const;
+  bool read_imu_raw_data(ImuRawData & imu_raw_data) const;
   bool write_joint_efforts(std::span<const double> efforts);
 
 private:
   class RobotBoard;
 
   void handle_can_frame(CanBus can_bus, uint32_t can_id, uint64_t can_data);
+  void handle_accelerometer_data(int16_t x, int16_t y, int16_t z);
+  void handle_gyroscope_data(int16_t x, int16_t y, int16_t z);
   void watchdog_loop();
 
   bool send_activation_frames_locked();
@@ -66,6 +80,8 @@ private:
   bool commands_zeroed_ = true;
   std::chrono::steady_clock::time_point last_command_update_{};
   std::chrono::steady_clock::time_point last_command_send_{};
+
+  std::unique_ptr<Bmi088Device> bmi088_device_;
 };
 
 }  // namespace librmcs_hardware

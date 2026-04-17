@@ -1,15 +1,24 @@
 controller_manager:
   ros__parameters:
-    update_rate: 200
+    update_rate: 1000
 
     joint_state_broadcaster:
       type: joint_state_broadcaster/JointStateBroadcaster
+
+    imu_broadcaster:
+      type: imu_sensor_broadcaster/IMUSensorBroadcaster
 
     vmc_controller:
       type: vmc_controller/VMCController
 
     lqr_controller:
       type: lqr_controller/LQRController
+
+imu_broadcaster:
+  ros__parameters:
+    sensor_name: "imu_sensor"
+    topic_name: "/imu/data"
+    frame_id: "imu_link"
 
 vmc_controller:
   ros__parameters:
@@ -95,8 +104,8 @@ vmc_controller:
           kp: -10.0
           ki: 0.0
           kd: -5.0
-          u_clamp_max: 50.0
-          u_clamp_min: -50.0
+          u_clamp_max: 0.0
+          u_clamp_min: -0.0
           i_clamp_max: 5.0
           i_separation_threshold: 0.0
         right_leg:
@@ -144,6 +153,20 @@ lqr_controller:
       9: 2.2893 # v_err -> Tp
       10: 12.1973 # pitch -> Tp
       11: 0.4578 # pitch_gyro -> Tp
+
+joint_state_broadcaster:
+  ros__parameters:
+    joints:
+      - Left_front_joint
+      - Left_rear_joint
+      - Left_Wheel_joint
+      - Right_front_joint
+      - Right_rear_joint
+      - Right_Wheel_joint
+    interfaces:
+      - position
+      - velocity
+      - effort
 
     # 右腿LQR增益矩阵 (12个值)
     right_lqr_gains:

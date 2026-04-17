@@ -135,6 +135,14 @@
                 <param name="startup_timeout_ms">1500</param>
                 <param name="command_timeout_ms">100</param>
                 <param name="allow_partial_feedback">true</param>
+                <param name="imu_sensor_name">imu_sensor</param>
+                <param name="imu_sample_freq">1000.0</param>
+                <param name="imu_kp">0.2</param>
+                <param name="imu_ki">0.0</param>
+                <param name="imu_gyro_axes">1,2,3</param>
+                <param name="imu_acc_axes">1,2,3</param>
+                <param name="imu_calibration_enable">0</param>
+                <param name="imu_calibration_file">src/hardware/librmcs_hardware/msg/imu_calibration.yaml</param>
             </hardware>
             <joint name="Left_front_joint">
                 <command_interface name="effort" />
@@ -221,6 +229,18 @@
                 <param name="reversed">false</param>
                 <param name="multi_turn_angle">false</param>
             </joint>
+            <sensor name="imu_sensor">
+                <state_interface name="orientation.x"/>
+                <state_interface name="orientation.y"/>
+                <state_interface name="orientation.z"/>
+                <state_interface name="orientation.w"/>
+                <state_interface name="angular_velocity.x"/>
+                <state_interface name="angular_velocity.y"/>
+                <state_interface name="angular_velocity.z"/>
+                <state_interface name="linear_acceleration.x"/>
+                <state_interface name="linear_acceleration.y"/>
+                <state_interface name="linear_acceleration.z"/>
+            </sensor>
         </ros2_control>
         </xacro:unless>
     </xacro:unless>

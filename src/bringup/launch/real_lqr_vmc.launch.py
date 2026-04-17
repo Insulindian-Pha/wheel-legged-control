@@ -54,10 +54,22 @@ def launch_setup(context, *args, **kwargs):
             ),
             on_exit=Shutdown(),
         ),
+        Node(
+            package="bringup",
+            executable="imu_tf_broadcaster",
+            output="both",
+            parameters=[
+                {"imu_topic": "/imu_broadcaster/imu"},
+                {"parent_frame": "odom"},
+                {"child_frame": "base_link"},
+                {"use_imu_stamp": True},
+            ],
+        ),
     ]
 
     controllers_to_spawn = [
         "joint_state_broadcaster",
+        "imu_broadcaster",
         "vmc_controller",
         "lqr_controller",
     ]

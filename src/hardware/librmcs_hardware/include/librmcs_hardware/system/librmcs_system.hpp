@@ -19,6 +19,8 @@
 
 #include <control_input_msgs/msg/inputs.hpp>
 
+#include "librmcs_hardware/devices/bmi088_device.hpp"
+
 #include "librmcs_hardware/driver/librmcs_robot_driver.hpp"
 
 #define LIBRMCS_HARDWARE_ROS_DISTRO_HUMBLE (HARDWARE_INTERFACE_VERSION_MAJOR < 3)
@@ -47,11 +49,26 @@ public:
   hardware_interface::return_type write(const rclcpp::Time & time, const rclcpp::Duration & period) override;
 
 private:
+  struct ImuState
+  {
+    double orientation_x{0.0};
+    double orientation_y{0.0};
+    double orientation_z{0.0};
+    double orientation_w{1.0};
+    double angular_velocity_x{0.0};
+    double angular_velocity_y{0.0};
+    double angular_velocity_z{0.0};
+    double linear_acceleration_x{0.0};
+    double linear_acceleration_y{0.0};
+    double linear_acceleration_z{0.0};
+  };
+
   static std::string get_parameter(
     const std::unordered_map<std::string, std::string> & parameters,
     const std::string & key,
     const std::string & default_value = "");
   static bool parse_bool(const std::string & value, bool default_value = false);
+  static double parse_double(const std::string & value, double default_value);
   static JointConfig::Vendor parse_vendor(const std::string & value);
   static CanBus parse_can_bus(const std::string & value);
 
@@ -64,6 +81,10 @@ private:
   std::vector<double> hw_velocities_;
   std::vector<double> hw_efforts_;
   std::vector<double> hw_commands_;
+  ImuState imu_state_;
+  std::unique_ptr<Bmi088Processor> bmi088_processor_;
+  std::string imu_sensor_name_{"imu_sensor"};
+  Bmi088Processor::Config imu_config_{};
   std::unique_ptr<LibrmcsRobotDriver> driver_;
   rclcpp::Logger logger_;
 

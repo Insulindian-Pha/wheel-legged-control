@@ -1,6 +1,8 @@
 #include "librmcs_hardware/system/librmcs_system.hpp"
 
 #include <algorithm>
+#include <array>
+#include <cmath>
 #include <set>
 #include <sstream>
 #include <stdexcept>
@@ -24,6 +26,49 @@ std::string join_names(const std::vector<std::string> & names) {
     stream << names[index];
   }
   return stream.str();
+}
+
+constexpr std::array<const char *, 10> kImuInterfaceNames = {
+  "orientation.x",
+  "orientation.y",
+  "orientation.z",
+  "orientation.w",
+  "angular_velocity.x",
+  "angular_velocity.y",
+  "angular_velocity.z",
+  "linear_acceleration.x",
+  "linear_acceleration.y",
+  "linear_acceleration.z"};
+
+bool is_valid_axis_mapping(const std::array<int, 3> & mapping) {
+  std::array<bool, 3> used_axes = {false, false, false};
+  for (const auto axis : mapping) {
+    const int abs_axis = std::abs(axis);
+    if (abs_axis < 1 || abs_axis > 3 || used_axes[abs_axis - 1]) {
+      return false;
+    }
+    used_axes[abs_axis - 1] = true;
+  }
+  return true;
+}
+
+std::array<int, 3> parse_axis_mapping(const std::string & value) {
+  std::array<int, 3> mapping = {1, 2, 3};
+  std::stringstream stream(value);
+  std::string token;
+  for (std::size_t index = 0; index < mapping.size(); ++index) {
+    if (!std::getline(stream, token, ',')) {
+      throw std::runtime_error("Axis mapping must contain exactly 3 comma-separated values.");
+    }
+    mapping[index] = std::stoi(token);
+  }
+  if (std::getline(stream, token, ',')) {
+    throw std::runtime_error("Axis mapping must contain exactly 3 comma-separated values.");
+  }
+  if (!is_valid_axis_mapping(mapping)) {
+    throw std::runtime_error("Axis mapping must be a permutation of +/-1,+/-2,+/-3.");
+  }
+  return mapping;
 }
 
 }  // namespace
@@ -72,9 +117,65 @@ LibrmcsSystem::on_init(const hardware_interface::HardwareComponentInterfaceParam
       std::stoi(get_parameter(info_.hardware_parameters, "command_timeout_ms", "100")));
     allow_partial_feedback_ =
       parse_bool(get_parameter(info_.hardware_parameters, "allow_partial_feedback", "false"));
+    imu_sensor_name_ = get_parameter(info_.hardware_parameters, "imu_sensor_name", "imu_sensor");
+    imu_config_.sample_freq = parse_double(
+      get_parameter(info_.hardware_parameters, "imu_sample_freq", "200.0"), 200.0);
+    imu_config_.kp = parse_double(get_parameter(info_.hardware_parameters, "imu_kp", "1.0"), 1.0);
+    imu_config_.ki = parse_double(get_parameter(info_.hardware_parameters, "imu_ki", "0.0"), 0.0);
+    imu_config_.gyro_axes = parse_axis_mapping(
+      get_parameter(info_.hardware_parameters, "imu_gyro_axes", "1,2,3"));
+    imu_config_.acc_axes = parse_axis_mapping(
+      get_parameter(info_.hardware_parameters, "imu_acc_axes", "1,2,3"));
+    imu_config_.calibration_enable =
+      parse_bool(get_parameter(info_.hardware_parameters, "imu_calibration_enable", "0"), false);
+    imu_config_.calibration_window_samples = std::max(
+      1, std::stoi(get_parameter(info_.hardware_parameters, "imu_calibration_window_samples", "6000")));
+    imu_config_.calibration_accel_norm_span = parse_double(
+      get_parameter(info_.hardware_parameters, "imu_calibration_accel_norm_span", "0.5"), 0.5);
+    imu_config_.calibration_gyro_span = parse_double(
+      get_parameter(info_.hardware_parameters, "imu_calibration_gyro_span", "0.15"), 0.15);
+    imu_config_.gyro_offset_x = parse_double(
+      get_parameter(info_.hardware_parameters, "imu_gyro_offset_x", "0.0"), 0.0);
+    imu_config_.gyro_offset_y = parse_double(
+      get_parameter(info_.hardware_parameters, "imu_gyro_offset_y", "0.0"), 0.0);
+    imu_config_.gyro_offset_z = parse_double(
+      get_parameter(info_.hardware_parameters, "imu_gyro_offset_z", "0.0"), 0.0);
+    imu_config_.accel_scale = parse_double(
+      get_parameter(info_.hardware_parameters, "imu_accel_scale", "1.0"), 1.0);
+    imu_config_.accel_offset_x = parse_double(
+      get_parameter(info_.hardware_parameters, "imu_accel_offset_x", "0.0"), 0.0);
+    imu_config_.accel_offset_y = parse_double(
+      get_parameter(info_.hardware_parameters, "imu_accel_offset_y", "0.0"), 0.0);
+    imu_config_.accel_offset_z = parse_double(
+      get_parameter(info_.hardware_parameters, "imu_accel_offset_z", "0.0"), 0.0);
+    imu_config_.calibration_file = get_parameter(
+      info_.hardware_parameters, "imu_calibration_file", Bmi088Processor::default_calibration_file_path());
   } catch (const std::exception & ex) {
     RCLCPP_ERROR(logger_, "Failed to parse hardware parameters: %s", ex.what());
     return hardware_interface::CallbackReturn::ERROR;
+  }
+
+  const auto imu_sensor_iter = std::find_if(
+    info_.sensors.begin(), info_.sensors.end(),
+    [this](const auto & sensor) { return sensor.name == imu_sensor_name_; });
+  if (imu_sensor_iter == info_.sensors.end()) {
+    RCLCPP_ERROR(
+      logger_, "Missing IMU sensor '%s' in ros2_control configuration.", imu_sensor_name_.c_str());
+    return hardware_interface::CallbackReturn::ERROR;
+  }
+
+  std::set<std::string> imu_interfaces;
+  for (const auto & state_interface : imu_sensor_iter->state_interfaces) {
+    imu_interfaces.insert(state_interface.name);
+  }
+  for (const auto * interface_name : kImuInterfaceNames) {
+    if (!imu_interfaces.contains(interface_name)) {
+      RCLCPP_ERROR(
+        logger_,
+        "IMU sensor '%s' is missing state interface '%s'.",
+        imu_sensor_name_.c_str(), interface_name);
+      return hardware_interface::CallbackReturn::ERROR;
+    }
   }
 
   const auto joint_count = info_.joints.size();
@@ -151,7 +252,7 @@ LibrmcsSystem::on_init(const hardware_interface::HardwareComponentInterfaceParam
 
 std::vector<hardware_interface::StateInterface> LibrmcsSystem::export_state_interfaces() {
   std::vector<hardware_interface::StateInterface> state_interfaces;
-  state_interfaces.reserve(info_.joints.size() * 3);
+  state_interfaces.reserve(info_.joints.size() * 3 + kImuInterfaceNames.size());
 
   for (std::size_t index = 0; index < info_.joints.size(); ++index) {
     state_interfaces.emplace_back(
@@ -161,6 +262,23 @@ std::vector<hardware_interface::StateInterface> LibrmcsSystem::export_state_inte
     state_interfaces.emplace_back(
       info_.joints[index].name, hardware_interface::HW_IF_EFFORT, &hw_efforts_[index]);
   }
+
+  state_interfaces.emplace_back(imu_sensor_name_, "orientation.x", &imu_state_.orientation_x);
+  state_interfaces.emplace_back(imu_sensor_name_, "orientation.y", &imu_state_.orientation_y);
+  state_interfaces.emplace_back(imu_sensor_name_, "orientation.z", &imu_state_.orientation_z);
+  state_interfaces.emplace_back(imu_sensor_name_, "orientation.w", &imu_state_.orientation_w);
+  state_interfaces.emplace_back(
+    imu_sensor_name_, "angular_velocity.x", &imu_state_.angular_velocity_x);
+  state_interfaces.emplace_back(
+    imu_sensor_name_, "angular_velocity.y", &imu_state_.angular_velocity_y);
+  state_interfaces.emplace_back(
+    imu_sensor_name_, "angular_velocity.z", &imu_state_.angular_velocity_z);
+  state_interfaces.emplace_back(
+    imu_sensor_name_, "linear_acceleration.x", &imu_state_.linear_acceleration_x);
+  state_interfaces.emplace_back(
+    imu_sensor_name_, "linear_acceleration.y", &imu_state_.linear_acceleration_y);
+  state_interfaces.emplace_back(
+    imu_sensor_name_, "linear_acceleration.z", &imu_state_.linear_acceleration_z);
 
   return state_interfaces;
 }
@@ -184,6 +302,23 @@ hardware_interface::CallbackReturn LibrmcsSystem::on_activate(
     driver_ = std::make_unique<LibrmcsRobotDriver>(usb_pid_, command_timeout_, joint_configs_);
     // 只有收到 start 指令才发送 enable（默认不上电）。
     driver_->start(false);
+    bmi088_processor_ = std::make_unique<Bmi088Processor>();
+    std::string imu_warning;
+    if (!bmi088_processor_->initialize(imu_config_, &imu_warning)) {
+      RCLCPP_ERROR(logger_, "Failed to initialize BMI088 processor: %s", imu_warning.c_str());
+      driver_->stop();
+      driver_.reset();
+      bmi088_processor_.reset();
+      return hardware_interface::CallbackReturn::ERROR;
+    }
+    if (!imu_warning.empty()) {
+      RCLCPP_INFO(
+        logger_,
+        "BMI088 processor initialized with warning: %s",
+        imu_warning.c_str());
+    }
+
+    imu_state_ = ImuState{};
     motors_enabled_.store(false);
 
     if (!input_node_) {
@@ -262,6 +397,7 @@ hardware_interface::CallbackReturn LibrmcsSystem::on_deactivate(
     driver_->stop();
     driver_.reset();
   }
+  bmi088_processor_.reset();
 
   if (input_node_) {
     try {
@@ -282,7 +418,7 @@ hardware_interface::CallbackReturn LibrmcsSystem::on_deactivate(
 hardware_interface::return_type LibrmcsSystem::read(
   const rclcpp::Time & /*time*/, const rclcpp::Duration & /*period*/)
 {
-  if (!driver_) {
+  if (!driver_ || !bmi088_processor_) {
     return hardware_interface::return_type::ERROR;
   }
 
@@ -295,6 +431,34 @@ hardware_interface::return_type LibrmcsSystem::read(
     hw_positions_[index] = states[index].position;
     hw_velocities_[index] = states[index].velocity;
     hw_efforts_[index] = states[index].effort;
+  }
+
+  LibrmcsRobotDriver::ImuRawData imu_raw_data;
+  if (driver_->read_imu_raw_data(imu_raw_data)) {
+    Bmi088Device::ImuRawData raw_data = {
+      imu_raw_data.acc_x,
+      imu_raw_data.acc_y,
+      imu_raw_data.acc_z,
+      imu_raw_data.gyro_x,
+      imu_raw_data.gyro_y,
+      imu_raw_data.gyro_z};
+    Bmi088Processor::State state;
+    std::string imu_info;
+    bmi088_processor_->update(raw_data, state, &imu_info);
+    if (!imu_info.empty()) {
+      RCLCPP_INFO(logger_, "%s", imu_info.c_str());
+    }
+
+    imu_state_.orientation_w = state.orientation_w;
+    imu_state_.orientation_x = state.orientation_x;
+    imu_state_.orientation_y = state.orientation_y;
+    imu_state_.orientation_z = state.orientation_z;
+    imu_state_.angular_velocity_x = state.angular_velocity_x;
+    imu_state_.angular_velocity_y = state.angular_velocity_y;
+    imu_state_.angular_velocity_z = state.angular_velocity_z;
+    imu_state_.linear_acceleration_x = state.linear_acceleration_x;
+    imu_state_.linear_acceleration_y = state.linear_acceleration_y;
+    imu_state_.linear_acceleration_z = state.linear_acceleration_z;
   }
 
   return hardware_interface::return_type::OK;
@@ -341,6 +505,13 @@ bool LibrmcsSystem::parse_bool(const std::string & value, bool default_value) {
     return false;
   }
   return default_value;
+}
+
+double LibrmcsSystem::parse_double(const std::string & value, double default_value) {
+  if (value.empty()) {
+    return default_value;
+  }
+  return std::stod(value);
 }
 
 JointConfig::Vendor LibrmcsSystem::parse_vendor(const std::string & value) {

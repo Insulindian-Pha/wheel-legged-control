@@ -7,6 +7,11 @@ endif()
 
 # find dependencies
 find_package(ament_cmake REQUIRED)
+find_package(geometry_msgs REQUIRED)
+find_package(rclcpp REQUIRED)
+find_package(sensor_msgs REQUIRED)
+find_package(tf2 REQUIRED)
+find_package(tf2_ros REQUIRED)
 # uncomment the following section in order to fill in
 # further dependencies manually.
 # find_package(<dependency> REQUIRED)
@@ -22,6 +27,20 @@ if(BUILD_TESTING)
   set(ament_cmake_cpplint_FOUND TRUE)
   ament_lint_auto_find_test_dependencies()
 endif()
+
+add_executable(imu_tf_broadcaster src/imu_tf_broadcaster.cpp)
+ament_target_dependencies(
+  imu_tf_broadcaster
+  geometry_msgs
+  rclcpp
+  sensor_msgs
+  tf2
+  tf2_ros
+)
+
+install(TARGETS imu_tf_broadcaster
+  DESTINATION lib/${PROJECT_NAME}
+)
 
 install(
   DIRECTORY 

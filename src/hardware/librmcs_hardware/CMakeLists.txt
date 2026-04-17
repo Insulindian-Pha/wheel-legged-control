@@ -51,6 +51,7 @@ add_library(${PROJECT_NAME}_plugin SHARED
   src/system/librmcs_system.cpp
   src/driver/grouped_can_command.cpp
   src/devices/bm_motor_device.cpp
+  src/devices/bmi088_device.cpp
   src/devices/dji_motor_device.cpp
   src/devices/dm_motor_device.cpp
   src/driver/librmcs_robot_driver.cpp

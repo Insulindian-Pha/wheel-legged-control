@@ -18,7 +18,7 @@ imu_broadcaster:
   ros__parameters:
     sensor_name: "imu_sensor"
     topic_name: "/imu/data"
-    frame_id: "base_link"
+    frame_id: "imu_link"
 
 vmc_controller:
   ros__parameters:
